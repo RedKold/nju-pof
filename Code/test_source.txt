@@ -1,0 +1,21 @@
+struct Student {
+    int id;
+    float score;
+    char name[20];
+};
+
+int main() {
+    struct Student s;
+    s.id = 1001;
+    s.score = 95.5;
+
+    if (s.score >= 90.0) {
+        printf("Excellent!");
+    } else if (s.score >= 80.0) {
+        printf("Good!");
+    } else {
+        printf("Need improvement!");
+    }
+
+    return 0;
+}
