@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "syntax.tab.h"
-extern int yyrestart(FILE*);
 int main(int argc, char**argv)
 {
     if(argc<=1) return 1;

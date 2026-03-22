@@ -75,13 +75,26 @@ extern int yydebug;
     T_RETURN = 281,
     T_IF = 282,
     T_ELSE = 283,
-    T_WHILE = 284
+    T_WHILE = 284,
+    UMINUS = 285
   };
 #endif
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef int YYSTYPE;
+union YYSTYPE
+{
+#line 203 "./syntax.y"
+
+    struct TreeNode* node;  // 语法树节点指针
+    int num;
+    float real;
+    char id[32];
+
+#line 95 "./syntax.tab.h"
+
+};
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define YYSTYPE_IS_DECLARED 1
 #endif
