@@ -35,11 +35,12 @@
 "{"                         { return T_LC;}
 "}"                         { return T_RC;}
 [0-9]+"."[0-9]+             { yylval.real = atof(yytext); return T_FLOAT;}
-[0-9]+                      { yylval.num = atoi(yytext); return T_INT;}
 0x[0-9a-fA-F]+              { yylval.num = strtol(yytext, NULL, 16); return T_INT;}
+0[0-7]+                     { yylval.num = strtol(yytext, NULL, 8); return T_INT;}
+[0-9]+                      { yylval.num = atoi(yytext); return T_INT;}
 [a-zA-Z_][a-zA-Z0-9_]*      { strncpy(yylval.id, yytext, 31); yylval.id[31] = '\0'; return T_ID;}
 [ \t\n\r]+                   { /* Skip whitespace */ }
-.                           { printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext); exit(1);return -1; }
+.                           { printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext); exit(0);return -1; }
 
 %%
 
