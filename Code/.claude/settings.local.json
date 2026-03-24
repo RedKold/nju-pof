@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(gcc:*)"
+      "Bash(gcc:*)",
+      "Bash(./parser ../Test/test3.cmm)",
+      "Read(//home/saaya/pof/lab1/**)"
     ]
   }
 }

@@ -1,0 +1,5 @@
+int main()
+{
+    itn b;
+    return 0;
+}

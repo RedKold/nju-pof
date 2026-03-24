@@ -1,0 +1,6 @@
+*.o
+*.h
+*DS_Store
+Code/.claude
+parser
+Code/*cmm
