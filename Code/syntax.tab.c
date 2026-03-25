@@ -743,8 +743,8 @@ static const yytype_int16 yyrline[] =
      286,   294,   300,   311,   317,   326,   341,   357,   359,   364,
      366,   374,   383,   404,   415,   420,   433,   435,   443,   448,
      457,   468,   473,   480,   482,   491,   503,   518,   533,   541,
-     549,   557,   565,   575,   583,   591,   593,   600,   607,   614,
-     620,   627,   633,   640,   657,   659,   664,   666
+     549,   557,   565,   573,   581,   589,   591,   598,   605,   612,
+     618,   625,   631,   638,   655,   657,   662,   664
 };
 #endif
 
@@ -2054,18 +2054,16 @@ yyreduce:
 #line 566 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      TreeNode* temp = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* plusNode = createTreeNode(NODE_PLUS, "+", yylineno);
-      addChild(temp, plusNode);
-      addChild(temp, (yyvsp[-2].node));
-      addChild(temp, (yyvsp[0].node));
-      addChild((yyval.node), temp);
+      addChild((yyval.node), plusNode);
+      addChild((yyval.node), (yyvsp[-2].node));
+      addChild((yyval.node), (yyvsp[0].node));
     }
-#line 2065 "./syntax.tab.c"
+#line 2063 "./syntax.tab.c"
     break;
 
   case 43:
-#line 576 "./syntax.y"
+#line 574 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* starNode = createTreeNode(NODE_STAR, "*", yylineno);
@@ -2073,11 +2071,11 @@ yyreduce:
       addChild((yyval.node), (yyvsp[-2].node));
       addChild((yyval.node), (yyvsp[0].node));
     }
-#line 2077 "./syntax.tab.c"
+#line 2075 "./syntax.tab.c"
     break;
 
   case 44:
-#line 584 "./syntax.y"
+#line 582 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* divNode = createTreeNode(NODE_DIV, "/", yylineno);
@@ -2085,130 +2083,130 @@ yyreduce:
       addChild((yyval.node), (yyvsp[-2].node));
       addChild((yyval.node), (yyvsp[0].node));
     }
-#line 2089 "./syntax.tab.c"
+#line 2087 "./syntax.tab.c"
     break;
 
   case 45:
-#line 592 "./syntax.y"
+#line 590 "./syntax.y"
     { (yyval.node) = (yyvsp[-1].node); }
-#line 2095 "./syntax.tab.c"
+#line 2093 "./syntax.tab.c"
     break;
 
   case 46:
-#line 594 "./syntax.y"
+#line 592 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* minusNode = createTreeNode(NODE_MINUS, "-", yylineno);
       addChild((yyval.node), minusNode);
       addChild((yyval.node), (yyvsp[0].node));
     }
-#line 2106 "./syntax.tab.c"
+#line 2104 "./syntax.tab.c"
     break;
 
   case 47:
-#line 601 "./syntax.y"
+#line 599 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* notNode = createTreeNode(NODE_NOT, "!", yylineno);
       addChild((yyval.node), notNode);
       addChild((yyval.node), (yyvsp[0].node));
     }
-#line 2117 "./syntax.tab.c"
+#line 2115 "./syntax.tab.c"
     break;
 
   case 48:
-#line 608 "./syntax.y"
+#line 606 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* idNode = createTreeNode(NODE_ID, yytext, yylineno);
       addChild((yyval.node), idNode);
       addChild((yyval.node), (yyvsp[-1].node));
     }
-#line 2128 "./syntax.tab.c"
+#line 2126 "./syntax.tab.c"
     break;
 
   case 49:
-#line 615 "./syntax.y"
+#line 613 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* idNode = createTreeNode(NODE_ID, yytext, yylineno);
       addChild((yyval.node), idNode);
     }
-#line 2138 "./syntax.tab.c"
+#line 2136 "./syntax.tab.c"
     break;
 
   case 50:
-#line 621 "./syntax.y"
+#line 619 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       addChild((yyval.node), (yyvsp[-2].node));
       TreeNode* idNode = createTreeNode(NODE_ID, yytext, yylineno);
       addChild((yyval.node), idNode);
     }
-#line 2149 "./syntax.tab.c"
+#line 2147 "./syntax.tab.c"
     break;
 
   case 51:
-#line 628 "./syntax.y"
+#line 626 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, yylineno);
       addChild((yyval.node), idNode);
     }
-#line 2159 "./syntax.tab.c"
+#line 2157 "./syntax.tab.c"
     break;
 
   case 52:
-#line 634 "./syntax.y"
+#line 632 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* intNode = createTreeNode(NODE_INT, "INT", yylineno);
       intNode->intVal = yylval.num;
       addChild((yyval.node), intNode);
     }
-#line 2170 "./syntax.tab.c"
+#line 2168 "./syntax.tab.c"
     break;
 
   case 53:
-#line 641 "./syntax.y"
+#line 639 "./syntax.y"
     {
       (yyval.node) = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* floatNode = createTreeNode(NODE_FLOAT, "FLOAT", yylineno);
       floatNode->floatVal = yylval.real;
       addChild((yyval.node), floatNode);
     }
-#line 2181 "./syntax.tab.c"
+#line 2179 "./syntax.tab.c"
     break;
 
   case 54:
-#line 658 "./syntax.y"
+#line 656 "./syntax.y"
     { (yyval.node) = (yyvsp[0].node); }
-#line 2187 "./syntax.tab.c"
+#line 2185 "./syntax.tab.c"
     break;
 
   case 55:
-#line 660 "./syntax.y"
+#line 658 "./syntax.y"
     { (yyval.node) = NULL; }
-#line 2193 "./syntax.tab.c"
+#line 2191 "./syntax.tab.c"
     break;
 
   case 56:
-#line 665 "./syntax.y"
+#line 663 "./syntax.y"
         { (yyval.node) = (yyvsp[0].node); }
-#line 2199 "./syntax.tab.c"
+#line 2197 "./syntax.tab.c"
     break;
 
   case 57:
-#line 667 "./syntax.y"
+#line 665 "./syntax.y"
         {
           (yyval.node) = (yyvsp[-2].node);
           (yyvsp[-2].node)->nextSibling = (yyvsp[0].node);
         }
-#line 2208 "./syntax.tab.c"
+#line 2206 "./syntax.tab.c"
     break;
 
 
-#line 2212 "./syntax.tab.c"
+#line 2210 "./syntax.tab.c"
 
       default: break;
     }
@@ -2440,6 +2438,6 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 673 "./syntax.y"
+#line 671 "./syntax.y"
 
 extern int yylex();

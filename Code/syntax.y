@@ -565,12 +565,10 @@ expr: expr T_ASSIGNOP expr
     | expr T_PLUS expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      TreeNode* temp = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* plusNode = createTreeNode(NODE_PLUS, "+", yylineno);
-      addChild(temp, plusNode);
-      addChild(temp, $1);
-      addChild(temp, $3);
-      addChild($$, temp);
+      addChild($$, plusNode);
+      addChild($$, $1);
+      addChild($$, $3);
     }
     | expr T_STAR expr
     {
