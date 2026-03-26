@@ -5,9 +5,13 @@
 
 #include "lex.yy.c"
 
+// Declare global variable from lexical.l
+extern int struct_line_number;
+
 // 语法树节点类型定义
 typedef enum {
-    NODE_PROGRAM, NODE_EXTDEF, NODE_EXTDEF_LIST, NODE_SPECIFIER, NODE_EXTDECLIST,
+    NODE_PROGRAM, NODE_EXTDEF, NODE_EXTDEF_LIST, NODE_SPECIFIER,NODE_STRUCTSPECIFIER,
+    NODE_OPTTAG, NODE_TAG, NODE_EXTDECLIST,
     NODE_VARDEC, NODE_FUNDEC, NODE_COMPST, NODE_STMTLIST, NODE_STMT,
     NODE_DEFLIST, NODE_DEF, NODE_DECLIST, NODE_DEC, NODE_EXPR, NODE_ARGS,
     NODE_EXPRLIST, NODE_PARAMS, NODE_PARAMDECLIST, NODE_PARAMDEC,
@@ -17,6 +21,8 @@ typedef enum {
     NODE_LB, NODE_RB, NODE_LC, NODE_RC, NODE_RETURN, NODE_IF, NODE_ELSE,
     NODE_WHILE
 } NodeType;
+
+
 
 // 语法树节点结构定义
 typedef struct TreeNode {
@@ -68,7 +74,7 @@ void addChild(TreeNode* parent, TreeNode* child) {
     }
 }
 
-// 打印语法树的函数（符合要求的格式）
+// 打印语法树的函数
 void printTree(TreeNode* root, int level) {
     if (root == NULL) {
         return;
@@ -191,10 +197,20 @@ void freeTree(TreeNode* root) {
     free(root);
 }
 
+int error_cnt=0;
 // 错误处理函数
 int yyerror(const char* msg) {
+    error_cnt++;
     // 替换常见错误信息为更友好的提示
-    if (strstr(msg, "expecting T_SEMI") != NULL) {
+    if (strstr(msg, "T_SEMI") != NULL) {
+        printf("Error type B at Line %d: Missing \";\"\n", yylineno);
+    } else if (strstr(msg, "T_RB") != NULL) {
+        printf("Error type B at Line %d: Missing \"]\"\n", yylineno);
+    } else if (strstr(msg, "T_COMMA") != NULL && strstr(msg, "unexpected") != NULL) {
+        // 处理 a[5,3] 这种情况的错误
+        printf("Error type B at Line %d: Missing \"]\"\n", yylineno);
+    } else if (strstr(msg, "T_ELSE") != NULL && strstr(msg, "unexpected") != NULL) {
+        // 处理 if 语句后缺少分号的错误
         printf("Error type B at Line %d: Missing \";\"\n", yylineno);
     } else {
         printf("Error type B at Line %d: %s\n", yylineno, msg);
@@ -208,7 +224,7 @@ int yyerror(const char* msg) {
 // Token 定义（与 lexical.l 中保持一致）
 // 使用不同的名称前缀以避免与 lexical.l 中的宏冲突
 %token T_INT T_FLOAT T_ID T_SEMI T_COMMA T_ASSIGNOP T_RELOP T_PLUS T_MINUS T_STAR T_DIV
-%token T_AND T_OR T_DOT T_NOT T_TYPE T_LP T_RP T_LB T_RB T_LC T_RC T_STRUCT T_RETURN T_IF T_ELSE T_WHILE
+%token T_AND T_OR T_DOT T_NOT T_TYPE T_LP T_RP T_LB T_RB T_LC T_RC T_STRUCT  T_RETURN T_IF T_ELSE T_WHILE
 %token UMINUS  // 用于表示一元负号的优先级
 
 // 语法树节点类型定义
@@ -220,7 +236,7 @@ int yyerror(const char* msg) {
 }
 
 // 为每个非终结符和终结符指定类型
-%type <node> program extDefList extDef extDecList specifier varDec funDec compSt stmtList stmt
+%type <node> program extDefList extDef extDecList specifier structSpecifier optTag  tag varDec funDec compSt stmtList stmt
 %type <node> defList def decList dec expr args exprList params paramDecList paramDec epsilon
 
 // 开始符号
@@ -239,7 +255,9 @@ program: extDefList
          // we let TreeNote as a part of attribute
          $$ = createTreeNode(NODE_PROGRAM, "Program", 1); // 固定为第1行
          addChild($$, $1);
-         printTree($$, 0);
+         // if has error, don't print it
+         if(error_cnt==0)
+          printTree($$, 0);
          freeTree($$);
        }
        ;
@@ -297,16 +315,54 @@ specifier: T_TYPE
            TreeNode* typeNode = createTreeNode(NODE_TYPE, yylval.id, yylineno);
            addChild($$, typeNode);
          }
-         | T_STRUCT T_ID
+         | structSpecifier
          {
-           $$ = createTreeNode(NODE_SPECIFIER, "Specifier", yylineno);
-           TreeNode* structNode = createTreeNode(NODE_STRUCT, "struct", yylineno);
-           TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, yylineno);
-           addChild($$, structNode);
-           addChild($$, idNode);
+          //  printf("SPECIFIER: LINE:%d\n", $1->lineNumber);
+           $$ = createTreeNode(NODE_SPECIFIER, "Specifier", $1->lineNumber);
+           addChild($$, $1);
          }
          ;
 
+structSpecifier: T_STRUCT optTag T_LC defList T_RC
+        {
+          $$ = createTreeNode(NODE_STRUCTSPECIFIER, "StructSpecifier", struct_line_number);
+          TreeNode* structNode = createTreeNode(NODE_STRUCT, "STRUCT", struct_line_number);
+          addChild($$, structNode);
+          addChild($$, $2);
+          TreeNode* lcNode = createTreeNode(NODE_LC, "LC", yylineno);
+          addChild($$, lcNode);
+          addChild($$, $4);
+          TreeNode* rcNode = createTreeNode(NODE_RC, "RC", yylineno);
+          addChild($$, rcNode);
+        }
+        |
+        T_STRUCT tag
+        {
+          $$ = createTreeNode(NODE_STRUCTSPECIFIER, "StructSpecifier", struct_line_number);
+          TreeNode* structNode = createTreeNode(NODE_STRUCT, "STRUCT", struct_line_number);
+          addChild($$, structNode);
+          addChild($$, $2);
+        }
+        ;
+
+optTag: T_ID
+        {
+          $$ = createTreeNode(NODE_OPTTAG, "OptTag", struct_line_number);
+          TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, struct_line_number);
+          addChild($$, idNode);
+        }
+        | epsilon
+        {
+          $$ = NULL;
+        }
+        ;
+
+tag:  T_ID
+        {
+          $$ = createTreeNode(NODE_TAG, "Tag", yylineno);
+          TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, yylineno);
+          addChild($$, idNode);
+        }
 // 变量声明：标识符，可选数组下标（支持多维数组）
 varDec: T_ID
       {
@@ -387,9 +443,7 @@ compSt: T_LC defList stmtList T_RC
         TreeNode* rcNode = createTreeNode(NODE_RC, "RC", yylineno);
         addChild($$, lcNode);
         if ($2 != NULL) {
-            TreeNode* defListNode = createTreeNode(NODE_DEFLIST, "DefList", $2->lineNumber);
-            addChild(defListNode, $2);
-            addChild($$, defListNode);
+            addChild($$, $2);
         }
         if ($3 != NULL) {
             TreeNode* stmtListNode = createTreeNode(NODE_STMTLIST, "StmtList", $3->lineNumber);
@@ -403,14 +457,9 @@ compSt: T_LC defList stmtList T_RC
 // 定义列表
 defList: def defList
        {
-         $$ = $1;
-         if ($2 != NULL) {
-             TreeNode* temp = $1;
-             while (temp->nextSibling != NULL) {
-                 temp = temp->nextSibling;
-             }
-             temp->nextSibling = $2;
-         }
+         $$ = createTreeNode(NODE_DEFLIST, "DefList", $1->lineNumber);
+         addChild($$, $1);
+         addChild($$, $2);
        }
        | epsilon
        { $$ = NULL; }
@@ -435,7 +484,9 @@ decList: dec
        | dec T_COMMA decList
        {
          $$ = $1;
-         $1->nextSibling = $3;
+         TreeNode* commaNode = createTreeNode(NODE_COMMA, "COMMA", yylineno);
+         $1->nextSibling = commaNode;
+         commaNode->nextSibling = $3;
        }
        ;
 
@@ -449,6 +500,9 @@ dec: varDec
    {
      $$ = createTreeNode(NODE_DEC, "Dec", yylineno);
      addChild($$, $1);
+     // Add a ASSIGNOP here
+     TreeNode* assignopNode = createTreeNode(NODE_ASSIGNOP, "ASSIGNOP", yylineno);
+     addChild($$, assignopNode);
      addChild($$, $3);
    }
    ;
@@ -476,6 +530,10 @@ stmt: expr T_SEMI
       addChild($$, $1);
       TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
       addChild($$, semiNode);
+    }
+    | expr error T_SEMI
+    {
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
     }
     | compSt
     { $$ = $1; }
@@ -541,49 +599,49 @@ expr: expr T_ASSIGNOP expr
     | expr T_AND expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
       TreeNode* andNode = createTreeNode(NODE_AND, "&&", yylineno);
       addChild($$, andNode);
-      addChild($$, $1);
       addChild($$, $3);
     }
     | expr T_OR expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
       TreeNode* orNode = createTreeNode(NODE_OR, "||", yylineno);
       addChild($$, orNode);
-      addChild($$, $1);
       addChild($$, $3);
     }
     | expr T_RELOP expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
       TreeNode* relopNode = createTreeNode(NODE_RELOP, yytext, yylineno);
       addChild($$, relopNode);
-      addChild($$, $1);
       addChild($$, $3);
     }
     | expr T_PLUS expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
       TreeNode* plusNode = createTreeNode(NODE_PLUS, "+", yylineno);
       addChild($$, plusNode);
-      addChild($$, $1);
       addChild($$, $3);
     }
     | expr T_STAR expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
       TreeNode* starNode = createTreeNode(NODE_STAR, "*", yylineno);
       addChild($$, starNode);
-      addChild($$, $1);
       addChild($$, $3);
     }
     | expr T_DIV expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
       TreeNode* divNode = createTreeNode(NODE_DIV, "/", yylineno);
       addChild($$, divNode);
-      addChild($$, $1);
       addChild($$, $3);
     }
     | T_LP expr T_RP
@@ -641,6 +699,22 @@ expr: expr T_ASSIGNOP expr
       TreeNode* floatNode = createTreeNode(NODE_FLOAT, "FLOAT", yylineno);
       floatNode->floatVal = yylval.real;
       addChild($$, floatNode);
+    }
+    | expr T_LB expr T_RB
+    {
+      $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
+      TreeNode* idxNode = createTreeNode(NODE_EXPR, "ArrayIndex", yylineno);
+      addChild(idxNode, $3);
+      addChild($$, idxNode);
+    }
+    | expr T_LB error T_RB
+    {
+      $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+    }
+    | expr T_LB expr error
+    {
+      $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
     }
     ;
 
