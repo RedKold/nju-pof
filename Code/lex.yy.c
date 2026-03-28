@@ -964,7 +964,7 @@ YY_RULE_SETUP
 case 29:
 YY_RULE_SETUP
 #line 51 "./lexical.l"
-{ yylval.node = createTreeNode(NODE_ID, "ID",yylineno); return T_ID;}
+{ yylval.node = createTreeNode(NODE_ID, yytext,yylineno); return T_ID;}
 	YY_BREAK
 case 30:
 /* rule 30 can match eol */

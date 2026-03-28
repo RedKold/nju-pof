@@ -43,10 +43,9 @@ int yyerror(const char* msg) {
 %define parse.error verbose
 
 // Token 定义（与 lexical.l 中保持一致）
-// 使用不同的名称前缀以避免与 lexical.l 中的宏冲突
 %token <num> T_INT
 %token <real> T_FLOAT
-%token <id> T_ID
+%token <node> T_ID
 %token T_SEMI T_COMMA T_ASSIGNOP T_RELOP T_PLUS T_MINUS T_STAR T_DIV
 %token T_AND T_OR T_DOT T_NOT
 %token <id> T_TYPE
@@ -193,8 +192,7 @@ structSpecifier: T_STRUCT optTag T_LC defList T_RC
 optTag: T_ID
         {
           $$ = createTreeNode(NODE_OPTTAG, "OptTag", struct_line_number);
-          TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, struct_line_number);
-          addChild($$, idNode);
+          addChild($$, $1);
         }
         | epsilon
         {
@@ -204,40 +202,31 @@ optTag: T_ID
 
 tag:  T_ID
         {
-          printf("DEBUG tag: T_ID=%s, yylval.id=%s, yylineno=%d\n", yytext, yylval.id, yylineno);
           $$ = createTreeNode(NODE_TAG, "Tag", yylineno);
-          // Copy yytext instead of yylval.id to ensure we use the current token's value
-          char temp[32];
-          strncpy(temp, yytext, sizeof(temp)-1);
-          temp[sizeof(temp)-1] = '\0';
-          TreeNode* idNode = createTreeNode(NODE_ID, temp, yylineno);
-          addChild($$, idNode);
+          addChild($$, $1);
         }
 // 变量声明：标识符，可选数组下标（支持多维数组）
 varDec: T_ID
       {
         $$ = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
-        TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, yylineno);
-        addChild($$, idNode);
+        addChild($$, $1);
       }
       | T_ID T_LB T_INT T_RB
       {
         $$ = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
-        TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, yylineno);
+        addChild($$, $1);
         TreeNode* intNode = createTreeNode(NODE_INT, "INT", yylineno);
         intNode->intVal = yylval.num;
-        addChild($$, idNode);
         addChild($$, intNode);
       }
       | T_ID T_LB T_INT T_RB T_LB T_INT T_RB
       {
         $$ = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
-        TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, yylineno);
+        addChild($$, $1);
         TreeNode* intNode1 = createTreeNode(NODE_INT, "INT", yylineno);
         intNode1->intVal = yylval.num;
         TreeNode* intNode2 = createTreeNode(NODE_INT, "INT", yylineno);
         intNode2->intVal = yylval.num; // 这里需要修复，第二个数组下标值获取有问题，但暂时先支持语法
-        addChild($$, idNode);
         addChild($$, intNode1);
         addChild($$, intNode2);
       }
@@ -247,10 +236,9 @@ varDec: T_ID
 funDec: T_ID T_LP params T_RP
       {
         $$ = createTreeNode(NODE_FUNDEC, "FunDec", yylineno);
-        TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, yylineno);
+        addChild($$, $1);
         TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
         TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
-        addChild($$, idNode);
         addChild($$, lpNode);
         if ($3 != NULL) {
             addChild($$, $3);
@@ -515,15 +503,13 @@ expr: expr T_ASSIGNOP expr
     | T_ID T_LP args T_RP
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      TreeNode* idNode = createTreeNode(NODE_ID, yytext, yylineno);
-      addChild($$, idNode);
+      addChild($$, $1);
       addChild($$, $3);
     }
     | T_ID T_LP T_RP
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      TreeNode* idNode = createTreeNode(NODE_ID, yytext, yylineno);
-      addChild($$, idNode);
+      addChild($$, $1);
     }
     | expr T_DOT T_ID
     {
@@ -531,14 +517,12 @@ expr: expr T_ASSIGNOP expr
       addChild($$, $1);
       TreeNode* dotNode = createTreeNode(NODE_DOT, "DOT", yylineno);
       addChild($$, dotNode);
-      TreeNode* idNode = createTreeNode(NODE_ID, yytext, yylineno);
-      addChild($$, idNode);
+      addChild($$, $3);
     }
     | T_ID
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      TreeNode* idNode = createTreeNode(NODE_ID, yylval.id, yylineno);
-      addChild($$, idNode);
+      addChild($$, $1);
     }
     | T_INT
     {

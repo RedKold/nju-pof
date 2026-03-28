@@ -48,7 +48,7 @@ int lc_line_number = 0;     // for T_LC
 0x[0-9a-fA-F]+              { yylval.num = strtol(yytext, NULL, 16); return T_INT;}
 0[0-7]+                     { yylval.num = strtol(yytext, NULL, 8); return T_INT;}
 [0-9]+                      { yylval.num = atoi(yytext); return T_INT;}
-[a-zA-Z_][a-zA-Z0-9_]*      { yylval.node = createTreeNode(NODE_ID, "ID",yylineno); return T_ID;}
+[a-zA-Z_][a-zA-Z0-9_]*      { yylval.node = createTreeNode(NODE_ID, yytext,yylineno); return T_ID;}
 [ \t\n\r]+                   { /* Skip whitespace */ }
 .                           { printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext); exit(0);return -1; }
 
