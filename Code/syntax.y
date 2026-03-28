@@ -2,201 +2,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "tree/tree.h"
 #include "lex.yy.c"
+
+// int yylex();
+
+// // include it;
+// extern char* yytext;
+// extern int yylineno;
+int yyerror(const char*s);
 
 // Declare global variables from lexical.l
 extern int struct_line_number; // for T_STRUCT
 extern int lc_line_number;     // for T_LC
 
-// 语法树节点类型定义
-typedef enum {
-    NODE_PROGRAM, NODE_EXTDEF, NODE_EXTDEF_LIST, NODE_SPECIFIER,NODE_STRUCTSPECIFIER,
-    NODE_OPTTAG, NODE_TAG, NODE_EXTDECLIST,
-    NODE_VARDEC, NODE_FUNDEC, NODE_COMPST, NODE_STMTLIST, NODE_STMT,
-    NODE_DEFLIST, NODE_DEF, NODE_DECLIST, NODE_DEC, NODE_EXPR, NODE_ARGS,
-    NODE_EXPRLIST, NODE_PARAMS, NODE_PARAMDECLIST, NODE_PARAMDEC,
-    NODE_TYPE, NODE_STRUCT, NODE_INT, NODE_FLOAT, NODE_ID, NODE_ASSIGNOP,
-    NODE_RELOP, NODE_PLUS, NODE_MINUS, NODE_STAR, NODE_DIV, NODE_AND,
-    NODE_OR, NODE_NOT, NODE_SEMI, NODE_COMMA, NODE_DOT, NODE_LP, NODE_RP,
-    NODE_LB, NODE_RB, NODE_LC, NODE_RC, NODE_RETURN, NODE_IF, NODE_ELSE,
-    NODE_WHILE
-} NodeType;
 
-
-
-// 语法树节点结构定义
-typedef struct TreeNode {
-    NodeType type;          // 节点类型
-    char name[32];          // 节点名称（用于存储标识符、关键字等）
-    int intVal;             // 存储整数值
-    float floatVal;         // 存储浮点数值
-    int lineNumber;         // 行号
-    struct TreeNode* firstChild;  // 第一个子节点
-    struct TreeNode* nextSibling; // 下一个兄弟节点
-} TreeNode;
-
-// 创建语法树节点的函数
-// maintain a lineNumber for later
-TreeNode* createTreeNode(NodeType type, char* name, int lineNumber) {
-    TreeNode* node = (TreeNode*)malloc(sizeof(TreeNode));
-    if (node == NULL) {
-        printf("Memory allocation failed!\n");
-        exit(1);
-    }
-    node->type = type;
-    strncpy(node->name, name, 31);
-    node->name[31] = '\0';
-    node->intVal = 0;
-    node->floatVal = 0.0;
-    node->lineNumber = lineNumber;
-    node->firstChild = NULL;
-    node->nextSibling = NULL;
-    return node;
-}
-
-// 向父节点添加子节点的函数
-void addChild(TreeNode* parent, TreeNode* child) {
-    // if null then we don't do this 
-    if (parent == NULL || child == NULL) {
-        return;
-    }
-
-    // if the first child is null, then we let child as the fisrt
-    if (parent->firstChild == NULL) {
-        parent->firstChild = child;
-    } else {
-        TreeNode* sibling = parent->firstChild;
-        // add it for tree
-        while (sibling->nextSibling != NULL) {
-            sibling = sibling->nextSibling;
-        }
-        sibling->nextSibling = child;
-    }
-}
-
-// 打印语法树的函数
-void printTree(TreeNode* root, int level) {
-    if (root == NULL) {
-        return;
-    }
-
-    // 打印缩进
-    for (int i = 0; i < level; i++) {
-        printf("  ");
-    }
-
-    // 区分语法单元和词法单元
-    // 语法单元：需要打印名称和行号
-    // 词法单元：只需打印名称，某些需要额外信息
-    switch (root->type) {
-        // 词法单元
-        case NODE_TYPE:
-            printf("TYPE: %s\n", root->name);
-            break;
-        case NODE_INT:
-            printf("INT: %d\n", root->intVal);
-            break;
-        case NODE_FLOAT:
-            printf("FLOAT: %.6f\n", root->floatVal);
-            break;
-        case NODE_ID:
-            printf("ID: %s\n", root->name);
-            break;
-        case NODE_ASSIGNOP:
-            printf("ASSIGNOP\n");
-            break;
-        case NODE_RELOP:
-            printf("RELOP\n");
-            break;
-        case NODE_PLUS:
-            printf("PLUS\n");
-            break;
-        case NODE_MINUS:
-            printf("MINUS\n");
-            break;
-        case NODE_STAR:
-            printf("STAR\n");
-            break;
-        case NODE_DIV:
-            printf("DIV\n");
-            break;
-        case NODE_AND:
-            printf("AND\n");
-            break;
-        case NODE_OR:
-            printf("OR\n");
-            break;
-        case NODE_NOT:
-            printf("NOT\n");
-            break;
-        case NODE_SEMI:
-            printf("SEMI\n");
-            break;
-        case NODE_COMMA:
-            printf("COMMA\n");
-            break;
-        case NODE_DOT:
-            printf("DOT\n");
-            break;
-        case NODE_LP:
-            printf("LP\n");
-            break;
-        case NODE_RP:
-            printf("RP\n");
-            break;
-        case NODE_LB:
-            printf("LB\n");
-            break;
-        case NODE_RB:
-            printf("RB\n");
-            break;
-        case NODE_LC:
-            printf("LC\n");
-            break;
-        case NODE_RC:
-            printf("RC\n");
-            break;
-        case NODE_STRUCT:
-            printf("STRUCT\n");
-            break;
-        case NODE_RETURN:
-            printf("RETURN\n");
-            break;
-        case NODE_IF:
-            printf("IF\n");
-            break;
-        case NODE_ELSE:
-            printf("ELSE\n");
-            break;
-        case NODE_WHILE:
-            printf("WHILE\n");
-            break;
-
-        // 语法单元
-        default:
-            // print name first then come the lineNumber
-            printf("%s (%d)\n", root->name, root->lineNumber);
-            break;
-    }
-
-    // 递归打印子节点
-    printTree(root->firstChild, level + 1);
-
-    // 打印兄弟节点
-    printTree(root->nextSibling, level);
-}
-
-// 释放语法树内存的函数
-void freeTree(TreeNode* root) {
-    if (root == NULL) {
-        return;
-    }
-
-    freeTree(root->firstChild);
-    freeTree(root->nextSibling);
-    free(root);
-}
 
 int error_cnt=0;
 // 错误处理函数
@@ -246,7 +66,7 @@ int yyerror(const char* msg) {
 
 // 语法树节点类型定义
 %union {
-    struct TreeNode* node;  // 语法树节点指针
+    TreeNode* node;  // 语法树节点指针
     int num;
     float real;
     char id[32];

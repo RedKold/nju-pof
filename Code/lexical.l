@@ -10,6 +10,8 @@
 int struct_line_number = 0; // for T_STRUCT
 int lc_line_number = 0;     // for T_LC
 
+// TreeNode interface
+#include "tree/tree.h"
 
 
 %}

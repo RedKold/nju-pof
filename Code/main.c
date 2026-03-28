@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "tree/tree.h"
 #include "syntax.tab.h"
 int main(int argc, char**argv)
 {
