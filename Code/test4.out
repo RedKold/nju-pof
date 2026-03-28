@@ -1,4 +1,4 @@
-./parser ../Test/test4.cmm
+DEBUG tag: T_ID=x, yylval.id=x, yylineno=7
 Program (1)
   ExtDefList (1)
     ExtDef (1)
@@ -17,21 +17,22 @@ Program (1)
                   VarDec (3)
                     ID: real
                 COMMA
-                Dec (3)
-                  VarDec (3)
-                    ID: image
+                DecList (3)
+                  Dec (3)
+                    VarDec (3)
+                      ID: image
               SEMI
           RC
       SEMI
-    ExtDefList (1)
-      ExtDef (1)
+    ExtDefList (5)
+      ExtDef (5)
         Specifier (5)
           TYPE: int
         FunDec (5)
           ID: main
           LP
           RP
-        CompSt (2)
+        CompSt (6)
           LC
           DefList (7)
             Def (7)
@@ -55,6 +56,6 @@ Program (1)
                   ID: image
                 ASSIGNOP
                 Exp (8)
-                  FLOAT: 3.5
+                  FLOAT: 3.500000
               SEMI
           RC

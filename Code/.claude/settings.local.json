@@ -3,7 +3,11 @@
     "allow": [
       "Bash(gcc:*)",
       "Bash(./parser ../Test/test3.cmm)",
-      "Read(//home/saaya/pof/lab1/**)"
+      "Read(//home/saaya/pof/lab1/**)",
+      "Bash(./parser ../debug_test.cmm)",
+      "Bash(make clean:*)",
+      "Bash(make)",
+      "Bash(rm ../debug_test.cmm)"
     ]
   }
 }
