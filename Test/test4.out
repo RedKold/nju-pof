@@ -1,5 +1,4 @@
 ./parser ../Test/test4.cmm
-DEBUG tag: T_ID=x, yylval.id=x, yylineno=7
 Program (1)
   ExtDefList (1)
     ExtDef (1)
@@ -41,7 +40,7 @@ Program (1)
                 StructSpecifier (7)
                   STRUCT
                   Tag (7)
-                    ID: x
+                    ID: Complex
               DecList (7)
                 Dec (7)
                   VarDec (7)

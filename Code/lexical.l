@@ -13,6 +13,14 @@ int lc_line_number = 0;     // for T_LC
 // TreeNode interface
 #include "tree/tree.h"
 
+#define true 1
+#define false 0
+
+int parse_ok=true;
+int line_has_error[1000] = {0}; // 假设文件最多有1000行
+
+
+
 
 %}
 
@@ -46,11 +54,14 @@ int lc_line_number = 0;     // for T_LC
 "}"                         { return T_RC;}
 [0-9]+"."[0-9]+             { yylval.real = atof(yytext); return T_FLOAT;}
 0x[0-9a-fA-F]+              { yylval.num = strtol(yytext, NULL, 16); return T_INT;}
+0x[0-9a-fA-F]*[g-zG-Z_]+    { if (!line_has_error[yylineno]) { printf("Error type A at Line %d: Illegal hexadecimal number '%s'\n", yylineno, yytext); parse_ok = false; line_has_error[yylineno] = 1; } return T_INT; }
 0[0-7]+                     { yylval.num = strtol(yytext, NULL, 8); return T_INT;}
-[0-9]+                      { yylval.num = atoi(yytext); return T_INT;}
+0[0-7]*[89_]+               { if (!line_has_error[yylineno]) { printf("Error type A at Line %d: Illegal octal number '%s'\n", yylineno, yytext); parse_ok = false; line_has_error[yylineno] = 1; } return T_INT; }
+[1-9][0-9]*                 { yylval.num = atoi(yytext); return T_INT;}
+"0"                         { yylval.num = 0; return T_INT;}
 [a-zA-Z_][a-zA-Z0-9_]*      { yylval.node = createTreeNode(NODE_ID, yytext,yylineno); return T_ID;}
 [ \t\n\r]+                   { /* Skip whitespace */ }
-.                           { printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext); exit(0);return -1; }
+.                           { printf("Error type A at Line %d: Mysterious character \"%s\"\n", yylineno, yytext); exit(0); }
 
 %%
 

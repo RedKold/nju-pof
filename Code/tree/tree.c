@@ -4,6 +4,8 @@
 #include<stdlib.h>
 #include<string.h>
 
+
+
 // 创建语法树节点的函数
 // maintain a lineNumber for later
 TreeNode* createTreeNode(NodeType type, char* name, int lineNumber) {
@@ -45,6 +47,12 @@ void addChild(TreeNode* parent, TreeNode* child) {
 
 // 打印语法树的函数
 void printTree(TreeNode* root, int level) {
+    // if error, no need to print tree;
+    if(!parse_ok)
+    {
+        return;
+    }
+
     if (root == NULL) {
         return;
     }

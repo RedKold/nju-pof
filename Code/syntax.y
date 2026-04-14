@@ -16,25 +16,32 @@ int yyerror(const char*s);
 extern int struct_line_number; // for T_STRUCT
 extern int lc_line_number;     // for T_LC
 
+extern int parse_ok;
+
 
 
 int error_cnt=0;
 // 错误处理函数
 int yyerror(const char* msg) {
-    error_cnt++;
-    // 替换常见错误信息为更友好的提示
-    if (strstr(msg, "T_SEMI") != NULL) {
-        printf("Error type B at Line %d: Missing \";\"\n", yylineno);
-    } else if (strstr(msg, "T_RB") != NULL) {
-        printf("Error type B at Line %d: Missing \"]\"\n", yylineno);
-    } else if (strstr(msg, "T_COMMA") != NULL && strstr(msg, "unexpected") != NULL) {
-        // 处理 a[5,3] 这种情况的错误
-        printf("Error type B at Line %d: Missing \"]\"\n", yylineno);
-    } else if (strstr(msg, "T_ELSE") != NULL && strstr(msg, "unexpected") != NULL) {
-        // 处理 if 语句后缺少分号的错误
-        printf("Error type B at Line %d: Missing \";\"\n", yylineno);
-    } else {
-        printf("Error type B at Line %d: %s\n", yylineno, msg);
+    // 检查该行是否已经有词法错误，如果有，就不报告语法错误
+    extern int line_has_error[];
+    if (!line_has_error[yylineno]) {
+        error_cnt++;
+        // 替换常见错误信息为更友好的提示
+        if (strstr(msg, "T_SEMI") != NULL) {
+            printf("Error type B at Line %d: Missing \";\"\n", yylineno);
+        } else if (strstr(msg, "T_RB") != NULL) {
+            printf("Error type B at Line %d: Missing \"]\"\n", yylineno);
+        } else if (strstr(msg, "T_COMMA") != NULL && strstr(msg, "unexpected") != NULL) {
+            // 处理 a[5,3] 这种情况的错误
+            printf("Error type B at Line %d: Missing \"]\"\n", yylineno);
+        } else if (strstr(msg, "T_ELSE") != NULL && strstr(msg, "unexpected") != NULL) {
+            // 处理 if 语句后缺少分号的错误
+            printf("Error type B at Line %d: Missing \";\"\n", yylineno);
+        } else {
+            printf("Error type B at Line %d: %s\n", yylineno, msg);
+        }
+        line_has_error[yylineno] = 1; // 标记该行有错误
     }
     return 0;
 }
@@ -69,6 +76,7 @@ int yyerror(const char* msg) {
     int num;
     float real;
     char id[32];
+    int has_error;
 }
 
 // 为每个非终结符和终结符指定类型
