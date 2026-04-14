@@ -50,7 +50,7 @@ int line_has_error[1000] = {0}; // 假设文件最多有1000行
 ")"                         { return T_RP;}
 "["                         { return T_LB;}
 "]"                         { return T_RB;}
-"{"                         { lc_line_number = yylineno; return T_LC;}
+"{"                         { lc_line_number = yylineno; yylloc.first_line = yylineno; yylloc.last_line = yylineno; return T_LC;}
 "}"                         { return T_RC;}
 [0-9]+"."[0-9]+             { yylval.real = atof(yytext); return T_FLOAT;}
 0x[0-9a-fA-F]+              { yylval.num = strtol(yytext, NULL, 16); return T_INT;}

@@ -951,7 +951,7 @@ YY_RULE_SETUP
 case 23:
 YY_RULE_SETUP
 #line 53 "./lexical.l"
-{ lc_line_number = yylineno; return T_LC;}
+{ lc_line_number = yylineno; yylloc.first_line = yylineno; yylloc.last_line = yylineno; return T_LC;}
 	YY_BREAK
 case 24:
 YY_RULE_SETUP

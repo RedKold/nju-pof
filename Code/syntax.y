@@ -437,17 +437,16 @@ paramDec: specifier varDec
 // 复合语句：包含声明和语句
 compSt: T_LC defList stmtList T_RC
       {
-        TreeNode* lcNode = createTreeNode(NODE_LC, "LC", lc_line_number);
-        $$ = createTreeNode(NODE_COMPST, "CompSt", lc_line_number); // 第T_LC的行号
-        TreeNode* rcNode = createTreeNode(NODE_RC, "RC", yylineno);
+        // 使用 @1 获取 T_LC 标记的行号信息
+        TreeNode* lcNode = createTreeNode(NODE_LC, "LC", @1.first_line);
+        $$ = createTreeNode(NODE_COMPST, "CompSt", @1.first_line); // 第T_LC的行号
+        TreeNode* rcNode = createTreeNode(NODE_RC, "RC", @4.first_line);
         addChild($$, lcNode);
         if ($2 != NULL) {
             addChild($$, $2);
         }
         if ($3 != NULL) {
-            TreeNode* stmtListNode = createTreeNode(NODE_STMTLIST, "StmtList", $3->lineNumber);
-            addChild(stmtListNode, $3);
-            addChild($$, stmtListNode);
+            addChild($$, $3);
         }
         addChild($$, rcNode);
       }
@@ -457,11 +456,12 @@ compSt: T_LC defList stmtList T_RC
 // 语句列表
 stmtList: stmt stmtList
         {
+          $$ = createTreeNode(NODE_STMTLIST, "StmtList", $1->lineNumber);
           if ($2 != NULL) {
               $1->nextSibling = $2;
-              $$ = $1;
+              addChild($$,$1);
           } else {
-              $$ = $1;
+            addChild($$,$1);
           }
         }
         | epsilon
@@ -818,9 +818,11 @@ expr:
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
       addChild($$, $1);
-      TreeNode* idxNode = createTreeNode(NODE_EXPR, "ArrayIndex", yylineno);
-      addChild(idxNode, $3);
-      addChild($$, idxNode);
+      TreeNode* lbNode = createTreeNode(NODE_LB, "LB", yylineno);
+      TreeNode* rbNode = createTreeNode(NODE_RB, "RB", yylineno);
+      addChild($$,lbNode);
+      addChild($$, $3);
+      addChild($$,rbNode);
     }
     | expr T_DOT T_ID
     {
