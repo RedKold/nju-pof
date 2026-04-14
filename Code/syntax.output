@@ -15,19 +15,18 @@ State 27 conflicts: 1 shift/reduce
 State 44 conflicts: 1 shift/reduce
 State 45 conflicts: 1 shift/reduce
 State 59 conflicts: 1 reduce/reduce
-State 62 conflicts: 1 shift/reduce
 State 65 conflicts: 2 shift/reduce
 State 66 conflicts: 2 shift/reduce
+State 98 conflicts: 2 shift/reduce
+State 99 conflicts: 2 shift/reduce
 State 100 conflicts: 2 shift/reduce
 State 101 conflicts: 2 shift/reduce
 State 102 conflicts: 2 shift/reduce
 State 103 conflicts: 2 shift/reduce
 State 104 conflicts: 2 shift/reduce
 State 105 conflicts: 2 shift/reduce
-State 106 conflicts: 2 shift/reduce
-State 107 conflicts: 2 shift/reduce
-State 111 conflicts: 11 shift/reduce, 1 reduce/reduce
-State 143 conflicts: 1 shift/reduce
+State 109 conflicts: 11 shift/reduce, 1 reduce/reduce
+State 141 conflicts: 1 shift/reduce
 
 
 Grammar
@@ -80,95 +79,93 @@ Grammar
 
    32 compSt: T_LC defList stmtList T_RC
 
-   33 defList: def defList
-   34        | epsilon
+   33 stmtList: stmt stmtList
+   34         | epsilon
+   35         | error T_SEMI stmtList
+   36         | error T_RC stmtList
 
-   35 def: specifier decList T_SEMI
+   37 stmt: expr T_SEMI
+   38     | expr error T_SEMI
+   39     | error T_SEMI
+   40     | compSt
+   41     | T_RETURN expr T_SEMI
+   42     | T_IF T_LP expr T_RP stmt
+   43     | T_IF T_LP expr T_RP stmt T_ELSE stmt
+   44     | T_WHILE T_LP expr T_RP T_SEMI
+   45     | T_WHILE T_LP expr T_RP stmt
 
-   36 decList: dec
-   37        | dec T_COMMA decList
+   46 defList: def defList
+   47        | epsilon
 
-   38 dec: varDec
-   39    | varDec T_ASSIGNOP expr
+   48 def: specifier decList T_SEMI
 
-   40 stmtList: stmt stmtList
-   41         | epsilon
-   42         | error T_SEMI stmtList
-   43         | error T_RC stmtList
+   49 decList: dec
+   50        | dec T_COMMA decList
 
-   44 stmt: expr T_SEMI
-   45     | expr error T_SEMI
-   46     | error T_SEMI
-   47     | compSt
-   48     | T_RETURN expr T_SEMI
-   49     | T_IF T_LP expr T_RP stmt
-   50     | T_IF T_LP expr T_RP stmt T_ELSE stmt
-   51     | T_WHILE T_LP expr T_RP T_SEMI
-   52     | T_WHILE T_LP expr T_RP stmt
+   51 dec: varDec
+   52    | varDec T_ASSIGNOP expr
 
-   53 expr: expr T_ASSIGNOP T_LC exprList T_RC
-   54     | expr T_ASSIGNOP T_LC T_RC
-   55     | expr T_ASSIGNOP expr
-   56     | expr T_AND expr
-   57     | expr T_OR expr
-   58     | expr T_RELOP expr
-   59     | expr T_PLUS expr
-   60     | expr T_MINUS expr
-   61     | expr T_STAR expr
-   62     | expr T_DIV expr
-   63     | T_LP expr T_RP
-   64     | T_MINUS expr
-   65     | T_NOT expr
+   53 expr: expr T_ASSIGNOP expr
+   54     | expr T_AND expr
+   55     | expr T_OR expr
+   56     | expr T_RELOP expr
+   57     | expr T_PLUS expr
+   58     | expr T_MINUS expr
+   59     | expr T_STAR expr
+   60     | expr T_DIV expr
+   61     | T_LP expr T_RP
+   62     | T_MINUS expr
+   63     | T_NOT expr
+   64     | expr T_ASSIGNOP T_LC args T_RC
+   65     | expr T_ASSIGNOP T_LC T_RC
    66     | T_ID T_LP args T_RP
    67     | T_ID T_LP T_RP
-   68     | expr T_DOT T_ID
-   69     | T_ID
-   70     | T_INT
-   71     | T_FLOAT
-   72     | expr T_LB expr T_RB
+   68     | expr T_LB expr T_RB
+   69     | expr T_DOT T_ID
+   70     | T_ID
+   71     | T_INT
+   72     | T_FLOAT
    73     | expr T_LB error T_RB
    74     | expr T_LB expr error
 
-   75 args: exprList
-   76     | epsilon
-
-   77 exprList: expr
-   78         | expr T_COMMA exprList
-   79         | error T_COMMA exprList
-   80         | error T_RP
+   75 args: expr T_COMMA args
+   76     | expr
+   77     | expr T_COMMA
+   78     | error T_COMMA args
+   79     | error T_RP
 
 
 Terminals, with rules where they appear
 
     $end (0) 0
-    error (256) 3 6 7 11 42 43 45 46 73 74 79 80
-    T_INT <num> (258) 22 70
-    T_FLOAT <real> (259) 23 71
-    T_ID <node> (260) 18 20 21 25 26 66 67 68 69
-    T_SEMI (261) 6 8 9 11 35 42 44 45 46 48 51
-    T_COMMA (262) 13 28 29 37 78 79
-    T_ASSIGNOP (263) 39 53 54 55
-    T_RELOP (264) 58
-    T_PLUS (265) 59
-    T_MINUS (266) 60 64
-    T_STAR (267) 61
-    T_DIV (268) 62
-    T_AND (269) 56
-    T_OR (270) 57
-    T_DOT (271) 68
-    T_NOT (272) 65
+    error (256) 3 6 7 11 35 36 38 39 73 74 78 79
+    T_INT <num> (258) 22 71
+    T_FLOAT <real> (259) 23 72
+    T_ID <node> (260) 18 20 21 25 26 66 67 69 70
+    T_SEMI (261) 6 8 9 11 35 37 38 39 41 44 48
+    T_COMMA (262) 13 28 29 50 75 77 78
+    T_ASSIGNOP (263) 52 53 64 65
+    T_RELOP (264) 56
+    T_PLUS (265) 57
+    T_MINUS (266) 58 62
+    T_STAR (267) 59
+    T_DIV (268) 60
+    T_AND (269) 54
+    T_OR (270) 55
+    T_DOT (271) 69
+    T_NOT (272) 63
     T_TYPE <id> (273) 14
-    T_LP (274) 25 26 49 50 51 52 63 66 67
-    T_RP (275) 25 26 49 50 51 52 63 66 67 80
-    T_LB (276) 22 23 24 72 73 74
-    T_RB (277) 22 23 24 72 73
-    T_LC (278) 16 32 53 54
-    T_RC (279) 7 16 32 43 53 54
+    T_LP (274) 25 26 42 43 44 45 61 66 67
+    T_RP (275) 25 26 42 43 44 45 61 66 67 79
+    T_LB (276) 22 23 24 68 73 74
+    T_RB (277) 22 23 24 68 73
+    T_LC (278) 16 32 64 65
+    T_RC (279) 7 16 32 36 64 65
     T_STRUCT (280) 16 17
-    T_RETURN (281) 48
-    T_IF (282) 49 50
-    T_ELSE (283) 50
-    T_WHILE (284) 51 52
+    T_RETURN (281) 41
+    T_IF (282) 42 43
+    T_ELSE (283) 43
+    T_WHILE (284) 44 45
     UMINUS (285)
 
 
@@ -178,7 +175,7 @@ Nonterminals, with rules where they appear
         on left: 0
     epsilon <node> (32)
         on left: 1
-        on right: 5 19 30 34 41 76
+        on right: 5 19 30 34 47
     program <node> (33)
         on left: 2 3
         on right: 0
@@ -193,7 +190,7 @@ Nonterminals, with rules where they appear
         on right: 8 13
     specifier <node> (37)
         on left: 14 15
-        on right: 8 9 10 31 35
+        on right: 8 9 10 31 48
     structSpecifier <node> (38)
         on left: 16 17
         on right: 15
@@ -205,7 +202,7 @@ Nonterminals, with rules where they appear
         on right: 17
     varDec <node> (41)
         on left: 21 22 23 24
-        on right: 12 13 22 23 24 31 38 39
+        on right: 12 13 22 23 24 31 51 52
     funDec <node> (42)
         on left: 25 26
         on right: 10
@@ -217,34 +214,31 @@ Nonterminals, with rules where they appear
         on right: 27 28 29
     compSt <node> (45)
         on left: 32
-        on right: 10 47
-    defList <node> (46)
-        on left: 33 34
-        on right: 16 32 33
-    def <node> (47)
-        on left: 35
-        on right: 33
-    decList <node> (48)
-        on left: 36 37
-        on right: 35 37
-    dec <node> (49)
-        on left: 38 39
-        on right: 36 37
-    stmtList <node> (50)
-        on left: 40 41 42 43
-        on right: 32 40 42 43
-    stmt <node> (51)
-        on left: 44 45 46 47 48 49 50 51 52
-        on right: 40 49 50 52
+        on right: 10 40
+    stmtList <node> (46)
+        on left: 33 34 35 36
+        on right: 32 33 35 36
+    stmt <node> (47)
+        on left: 37 38 39 40 41 42 43 44 45
+        on right: 33 42 43 45
+    defList <node> (48)
+        on left: 46 47
+        on right: 16 32 46
+    def <node> (49)
+        on left: 48
+        on right: 46
+    decList <node> (50)
+        on left: 49 50
+        on right: 48 50
+    dec <node> (51)
+        on left: 51 52
+        on right: 49 50
     expr <node> (52)
         on left: 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74
-        on right: 24 39 44 45 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 68 72 73 74 77 78
+        on right: 24 37 38 41 42 43 44 45 52 53 54 55 56 57 58 59 60 61 62 63 64 65 68 69 73 74 75 76 77
     args <node> (53)
-        on left: 75 76
-        on right: 66
-    exprList <node> (54)
-        on left: 77 78 79 80
-        on right: 53 75 78 79
+        on left: 75 76 77 78 79
+        on right: 64 66 75 78
 
 
 State 0
@@ -605,14 +599,14 @@ State 32
 
 State 33
 
-   34 defList: epsilon .
+   47 defList: epsilon .
 
-    $default  reduce using rule 34 (defList)
+    $default  reduce using rule 47 (defList)
 
 
 State 34
 
-   35 def: specifier . decList T_SEMI
+   48 def: specifier . decList T_SEMI
 
     T_ID  shift, and go to state 42
 
@@ -630,7 +624,7 @@ State 35
 
 State 36
 
-   33 defList: def . defList
+   46 defList: def . defList
 
     T_TYPE    shift, and go to state 2
     T_STRUCT  shift, and go to state 3
@@ -702,39 +696,39 @@ State 43
 State 44
 
    22 varDec: varDec T_LB T_INT . T_RB
-   70 expr: T_INT .
+   71 expr: T_INT .
 
     T_RB  shift, and go to state 60
 
-    T_RB      [reduce using rule 70 (expr)]
-    $default  reduce using rule 70 (expr)
+    T_RB      [reduce using rule 71 (expr)]
+    $default  reduce using rule 71 (expr)
 
 
 State 45
 
    23 varDec: varDec T_LB T_FLOAT . T_RB
-   71 expr: T_FLOAT .
+   72 expr: T_FLOAT .
 
     T_RB  shift, and go to state 61
 
-    T_RB      [reduce using rule 71 (expr)]
-    $default  reduce using rule 71 (expr)
+    T_RB      [reduce using rule 72 (expr)]
+    $default  reduce using rule 72 (expr)
 
 
 State 46
 
    66 expr: T_ID . T_LP args T_RP
    67     | T_ID . T_LP T_RP
-   69     | T_ID .
+   70     | T_ID .
 
     T_LP  shift, and go to state 62
 
-    $default  reduce using rule 69 (expr)
+    $default  reduce using rule 70 (expr)
 
 
 State 47
 
-   64 expr: T_MINUS . expr
+   62 expr: T_MINUS . expr
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -748,7 +742,7 @@ State 47
 
 State 48
 
-   65 expr: T_NOT . expr
+   63 expr: T_NOT . expr
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -762,7 +756,7 @@ State 48
 
 State 49
 
-   63 expr: T_LP . expr T_RP
+   61 expr: T_LP . expr T_RP
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -777,18 +771,18 @@ State 49
 State 50
 
    24 varDec: varDec T_LB expr . T_RB
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
@@ -835,30 +829,30 @@ State 52
    22 varDec: varDec . T_LB T_INT T_RB
    23       | varDec . T_LB T_FLOAT T_RB
    24       | varDec . T_LB expr T_RB
-   38 dec: varDec .
-   39    | varDec . T_ASSIGNOP expr
+   51 dec: varDec .
+   52    | varDec . T_ASSIGNOP expr
 
     T_ASSIGNOP  shift, and go to state 88
     T_LB        shift, and go to state 30
 
-    $default  reduce using rule 38 (dec)
+    $default  reduce using rule 51 (dec)
 
 
 State 53
 
-   35 def: specifier decList . T_SEMI
+   48 def: specifier decList . T_SEMI
 
     T_SEMI  shift, and go to state 89
 
 
 State 54
 
-   36 decList: dec .
-   37        | dec . T_COMMA decList
+   49 decList: dec .
+   50        | dec . T_COMMA decList
 
     T_COMMA  shift, and go to state 90
 
-    $default  reduce using rule 36 (decList)
+    $default  reduce using rule 49 (decList)
 
 
 State 55
@@ -870,9 +864,9 @@ State 55
 
 State 56
 
-   33 defList: def defList .
+   46 defList: def defList .
 
-    $default  reduce using rule 33 (defList)
+    $default  reduce using rule 46 (defList)
 
 
 State 57
@@ -941,43 +935,39 @@ State 62
     T_LP     shift, and go to state 49
     T_RP     shift, and go to state 93
 
-    T_RP  [reduce using rule 1 (epsilon)]
-
-    epsilon   go to state 94
-    expr      go to state 95
-    args      go to state 96
-    exprList  go to state 97
+    expr  go to state 94
+    args  go to state 95
 
 
 State 63
 
-   70 expr: T_INT .
-
-    $default  reduce using rule 70 (expr)
-
-
-State 64
-
-   71 expr: T_FLOAT .
+   71 expr: T_INT .
 
     $default  reduce using rule 71 (expr)
 
 
+State 64
+
+   72 expr: T_FLOAT .
+
+    $default  reduce using rule 72 (expr)
+
+
 State 65
 
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   64     | T_MINUS expr .
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   62     | T_MINUS expr .
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
@@ -986,52 +976,52 @@ State 65
     T_DOT   shift, and go to state 76
     T_LB    shift, and go to state 77
 
-    T_DOT     [reduce using rule 64 (expr)]
-    T_LB      [reduce using rule 64 (expr)]
-    $default  reduce using rule 64 (expr)
+    T_DOT     [reduce using rule 62 (expr)]
+    T_LB      [reduce using rule 62 (expr)]
+    $default  reduce using rule 62 (expr)
 
 
 State 66
 
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   65     | T_NOT expr .
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   63     | T_NOT expr .
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
     T_DOT  shift, and go to state 76
     T_LB   shift, and go to state 77
 
-    T_DOT     [reduce using rule 65 (expr)]
-    T_LB      [reduce using rule 65 (expr)]
-    $default  reduce using rule 65 (expr)
+    T_DOT     [reduce using rule 63 (expr)]
+    T_LB      [reduce using rule 63 (expr)]
+    $default  reduce using rule 63 (expr)
 
 
 State 67
 
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   63     | T_LP expr . T_RP
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   61     | T_LP expr . T_RP
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
@@ -1044,15 +1034,15 @@ State 67
     T_AND       shift, and go to state 74
     T_OR        shift, and go to state 75
     T_DOT       shift, and go to state 76
-    T_RP        shift, and go to state 98
+    T_RP        shift, and go to state 96
     T_LB        shift, and go to state 77
 
 
 State 68
 
-   53 expr: expr T_ASSIGNOP . T_LC exprList T_RC
-   54     | expr T_ASSIGNOP . T_LC T_RC
-   55     | expr T_ASSIGNOP . expr
+   53 expr: expr T_ASSIGNOP . expr
+   64     | expr T_ASSIGNOP . T_LC args T_RC
+   65     | expr T_ASSIGNOP . T_LC T_RC
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -1060,14 +1050,42 @@ State 68
     T_MINUS  shift, and go to state 47
     T_NOT    shift, and go to state 48
     T_LP     shift, and go to state 49
-    T_LC     shift, and go to state 99
+    T_LC     shift, and go to state 97
 
-    expr  go to state 100
+    expr  go to state 98
 
 
 State 69
 
-   58 expr: expr T_RELOP . expr
+   56 expr: expr T_RELOP . expr
+
+    T_INT    shift, and go to state 63
+    T_FLOAT  shift, and go to state 64
+    T_ID     shift, and go to state 46
+    T_MINUS  shift, and go to state 47
+    T_NOT    shift, and go to state 48
+    T_LP     shift, and go to state 49
+
+    expr  go to state 99
+
+
+State 70
+
+   57 expr: expr T_PLUS . expr
+
+    T_INT    shift, and go to state 63
+    T_FLOAT  shift, and go to state 64
+    T_ID     shift, and go to state 46
+    T_MINUS  shift, and go to state 47
+    T_NOT    shift, and go to state 48
+    T_LP     shift, and go to state 49
+
+    expr  go to state 100
+
+
+State 71
+
+   58 expr: expr T_MINUS . expr
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -1079,9 +1097,9 @@ State 69
     expr  go to state 101
 
 
-State 70
+State 72
 
-   59 expr: expr T_PLUS . expr
+   59 expr: expr T_STAR . expr
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -1093,9 +1111,9 @@ State 70
     expr  go to state 102
 
 
-State 71
+State 73
 
-   60 expr: expr T_MINUS . expr
+   60 expr: expr T_DIV . expr
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -1107,9 +1125,9 @@ State 71
     expr  go to state 103
 
 
-State 72
+State 74
 
-   61 expr: expr T_STAR . expr
+   54 expr: expr T_AND . expr
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -1121,9 +1139,9 @@ State 72
     expr  go to state 104
 
 
-State 73
+State 75
 
-   62 expr: expr T_DIV . expr
+   55 expr: expr T_OR . expr
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -1135,48 +1153,20 @@ State 73
     expr  go to state 105
 
 
-State 74
-
-   56 expr: expr T_AND . expr
-
-    T_INT    shift, and go to state 63
-    T_FLOAT  shift, and go to state 64
-    T_ID     shift, and go to state 46
-    T_MINUS  shift, and go to state 47
-    T_NOT    shift, and go to state 48
-    T_LP     shift, and go to state 49
-
-    expr  go to state 106
-
-
-State 75
-
-   57 expr: expr T_OR . expr
-
-    T_INT    shift, and go to state 63
-    T_FLOAT  shift, and go to state 64
-    T_ID     shift, and go to state 46
-    T_MINUS  shift, and go to state 47
-    T_NOT    shift, and go to state 48
-    T_LP     shift, and go to state 49
-
-    expr  go to state 107
-
-
 State 76
 
-   68 expr: expr T_DOT . T_ID
+   69 expr: expr T_DOT . T_ID
 
-    T_ID  shift, and go to state 108
+    T_ID  shift, and go to state 106
 
 
 State 77
 
-   72 expr: expr T_LB . expr T_RB
+   68 expr: expr T_LB . expr T_RB
    73     | expr T_LB . error T_RB
    74     | expr T_LB . expr error
 
-    error    shift, and go to state 109
+    error    shift, and go to state 107
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
     T_ID     shift, and go to state 46
@@ -1184,7 +1174,7 @@ State 77
     T_NOT    shift, and go to state 48
     T_LP     shift, and go to state 49
 
-    expr  go to state 110
+    expr  go to state 108
 
 
 State 78
@@ -1196,17 +1186,17 @@ State 78
 
 State 79
 
-   42 stmtList: error . T_SEMI stmtList
-   43         | error . T_RC stmtList
-   46 stmt: error . T_SEMI
+   35 stmtList: error . T_SEMI stmtList
+   36         | error . T_RC stmtList
+   39 stmt: error . T_SEMI
 
-    T_SEMI  shift, and go to state 111
-    T_RC    shift, and go to state 112
+    T_SEMI  shift, and go to state 109
+    T_RC    shift, and go to state 110
 
 
 State 80
 
-   48 stmt: T_RETURN . expr T_SEMI
+   41 stmt: T_RETURN . expr T_SEMI
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -1215,49 +1205,49 @@ State 80
     T_NOT    shift, and go to state 48
     T_LP     shift, and go to state 49
 
-    expr  go to state 113
+    expr  go to state 111
 
 
 State 81
 
-   49 stmt: T_IF . T_LP expr T_RP stmt
-   50     | T_IF . T_LP expr T_RP stmt T_ELSE stmt
+   42 stmt: T_IF . T_LP expr T_RP stmt
+   43     | T_IF . T_LP expr T_RP stmt T_ELSE stmt
 
-    T_LP  shift, and go to state 114
+    T_LP  shift, and go to state 112
 
 
 State 82
 
-   51 stmt: T_WHILE . T_LP expr T_RP T_SEMI
-   52     | T_WHILE . T_LP expr T_RP stmt
+   44 stmt: T_WHILE . T_LP expr T_RP T_SEMI
+   45     | T_WHILE . T_LP expr T_RP stmt
 
-    T_LP  shift, and go to state 115
+    T_LP  shift, and go to state 113
 
 
 State 83
 
-   41 stmtList: epsilon .
+   34 stmtList: epsilon .
 
-    $default  reduce using rule 41 (stmtList)
+    $default  reduce using rule 34 (stmtList)
 
 
 State 84
 
-   47 stmt: compSt .
+   40 stmt: compSt .
 
-    $default  reduce using rule 47 (stmt)
+    $default  reduce using rule 40 (stmt)
 
 
 State 85
 
    32 compSt: T_LC defList stmtList . T_RC
 
-    T_RC  shift, and go to state 116
+    T_RC  shift, and go to state 114
 
 
 State 86
 
-   40 stmtList: stmt . stmtList
+   33 stmtList: stmt . stmtList
 
     error     shift, and go to state 79
     T_INT     shift, and go to state 63
@@ -1275,32 +1265,32 @@ State 86
 
     epsilon   go to state 83
     compSt    go to state 84
-    stmtList  go to state 117
+    stmtList  go to state 115
     stmt      go to state 86
     expr      go to state 87
 
 
 State 87
 
-   44 stmt: expr . T_SEMI
-   45     | expr . error T_SEMI
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   37 stmt: expr . T_SEMI
+   38     | expr . error T_SEMI
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
-    error       shift, and go to state 118
-    T_SEMI      shift, and go to state 119
+    error       shift, and go to state 116
+    T_SEMI      shift, and go to state 117
     T_ASSIGNOP  shift, and go to state 68
     T_RELOP     shift, and go to state 69
     T_PLUS      shift, and go to state 70
@@ -1315,7 +1305,7 @@ State 87
 
 State 88
 
-   39 dec: varDec T_ASSIGNOP . expr
+   52 dec: varDec T_ASSIGNOP . expr
 
     T_INT    shift, and go to state 63
     T_FLOAT  shift, and go to state 64
@@ -1324,24 +1314,24 @@ State 88
     T_NOT    shift, and go to state 48
     T_LP     shift, and go to state 49
 
-    expr  go to state 120
+    expr  go to state 118
 
 
 State 89
 
-   35 def: specifier decList T_SEMI .
+   48 def: specifier decList T_SEMI .
 
-    $default  reduce using rule 35 (def)
+    $default  reduce using rule 48 (def)
 
 
 State 90
 
-   37 decList: dec T_COMMA . decList
+   50 decList: dec T_COMMA . decList
 
     T_ID  shift, and go to state 42
 
     varDec   go to state 52
-    decList  go to state 121
+    decList  go to state 119
     dec      go to state 54
 
 
@@ -1354,11 +1344,11 @@ State 91
 
 State 92
 
-   79 exprList: error . T_COMMA exprList
-   80         | error . T_RP
+   78 args: error . T_COMMA args
+   79     | error . T_RP
 
-    T_COMMA  shift, and go to state 122
-    T_RP     shift, and go to state 123
+    T_COMMA  shift, and go to state 120
+    T_RP     shift, and go to state 121
 
 
 State 93
@@ -1370,31 +1360,25 @@ State 93
 
 State 94
 
-   76 args: epsilon .
-
-    $default  reduce using rule 76 (args)
-
-
-State 95
-
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
-   77 exprList: expr .
-   78         | expr . T_COMMA exprList
+   75 args: expr . T_COMMA args
+   76     | expr .
+   77     | expr . T_COMMA
 
-    T_COMMA     shift, and go to state 124
+    T_COMMA     shift, and go to state 122
     T_ASSIGNOP  shift, and go to state 68
     T_RELOP     shift, and go to state 69
     T_PLUS      shift, and go to state 70
@@ -1406,34 +1390,27 @@ State 95
     T_DOT       shift, and go to state 76
     T_LB        shift, and go to state 77
 
-    $default  reduce using rule 77 (exprList)
+    $default  reduce using rule 76 (args)
+
+
+State 95
+
+   66 expr: T_ID T_LP args . T_RP
+
+    T_RP  shift, and go to state 123
 
 
 State 96
 
-   66 expr: T_ID T_LP args . T_RP
+   61 expr: T_LP expr T_RP .
 
-    T_RP  shift, and go to state 125
+    $default  reduce using rule 61 (expr)
 
 
 State 97
 
-   75 args: exprList .
-
-    $default  reduce using rule 75 (args)
-
-
-State 98
-
-   63 expr: T_LP expr T_RP .
-
-    $default  reduce using rule 63 (expr)
-
-
-State 99
-
-   53 expr: expr T_ASSIGNOP T_LC . exprList T_RC
-   54     | expr T_ASSIGNOP T_LC . T_RC
+   64 expr: expr T_ASSIGNOP T_LC . args T_RC
+   65     | expr T_ASSIGNOP T_LC . T_RC
 
     error    shift, and go to state 92
     T_INT    shift, and go to state 63
@@ -1442,27 +1419,27 @@ State 99
     T_MINUS  shift, and go to state 47
     T_NOT    shift, and go to state 48
     T_LP     shift, and go to state 49
-    T_RC     shift, and go to state 126
+    T_RC     shift, and go to state 124
 
-    expr      go to state 95
-    exprList  go to state 127
+    expr  go to state 94
+    args  go to state 125
 
 
-State 100
+State 98
 
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   55     | expr T_ASSIGNOP expr .
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   53     | expr T_ASSIGNOP expr .
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
@@ -1477,168 +1454,29 @@ State 100
     T_DOT       shift, and go to state 76
     T_LB        shift, and go to state 77
 
-    T_DOT     [reduce using rule 55 (expr)]
-    T_LB      [reduce using rule 55 (expr)]
-    $default  reduce using rule 55 (expr)
+    T_DOT     [reduce using rule 53 (expr)]
+    T_LB      [reduce using rule 53 (expr)]
+    $default  reduce using rule 53 (expr)
 
 
-State 101
+State 99
 
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   58     | expr T_RELOP expr .
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   56     | expr T_RELOP expr .
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
-    T_PLUS   shift, and go to state 70
-    T_MINUS  shift, and go to state 71
-    T_STAR   shift, and go to state 72
-    T_DIV    shift, and go to state 73
-    T_DOT    shift, and go to state 76
-    T_LB     shift, and go to state 77
-
-    T_DOT     [reduce using rule 58 (expr)]
-    T_LB      [reduce using rule 58 (expr)]
-    $default  reduce using rule 58 (expr)
-
-
-State 102
-
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   59     | expr T_PLUS expr .
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
-   73     | expr . T_LB error T_RB
-   74     | expr . T_LB expr error
-
-    T_STAR  shift, and go to state 72
-    T_DIV   shift, and go to state 73
-    T_DOT   shift, and go to state 76
-    T_LB    shift, and go to state 77
-
-    T_DOT     [reduce using rule 59 (expr)]
-    T_LB      [reduce using rule 59 (expr)]
-    $default  reduce using rule 59 (expr)
-
-
-State 103
-
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   60     | expr T_MINUS expr .
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
-   73     | expr . T_LB error T_RB
-   74     | expr . T_LB expr error
-
-    T_STAR  shift, and go to state 72
-    T_DIV   shift, and go to state 73
-    T_DOT   shift, and go to state 76
-    T_LB    shift, and go to state 77
-
-    T_DOT     [reduce using rule 60 (expr)]
-    T_LB      [reduce using rule 60 (expr)]
-    $default  reduce using rule 60 (expr)
-
-
-State 104
-
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   61     | expr T_STAR expr .
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
-   73     | expr . T_LB error T_RB
-   74     | expr . T_LB expr error
-
-    T_DOT  shift, and go to state 76
-    T_LB   shift, and go to state 77
-
-    T_DOT     [reduce using rule 61 (expr)]
-    T_LB      [reduce using rule 61 (expr)]
-    $default  reduce using rule 61 (expr)
-
-
-State 105
-
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   62     | expr T_DIV expr .
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
-   73     | expr . T_LB error T_RB
-   74     | expr . T_LB expr error
-
-    T_DOT  shift, and go to state 76
-    T_LB   shift, and go to state 77
-
-    T_DOT     [reduce using rule 62 (expr)]
-    T_LB      [reduce using rule 62 (expr)]
-    $default  reduce using rule 62 (expr)
-
-
-State 106
-
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   56     | expr T_AND expr .
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
-   73     | expr . T_LB error T_RB
-   74     | expr . T_LB expr error
-
-    T_RELOP  shift, and go to state 69
     T_PLUS   shift, and go to state 70
     T_MINUS  shift, and go to state 71
     T_STAR   shift, and go to state 72
@@ -1651,21 +1489,160 @@ State 106
     $default  reduce using rule 56 (expr)
 
 
-State 107
+State 100
 
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   57     | expr T_OR expr .
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   57     | expr T_PLUS expr .
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
+   73     | expr . T_LB error T_RB
+   74     | expr . T_LB expr error
+
+    T_STAR  shift, and go to state 72
+    T_DIV   shift, and go to state 73
+    T_DOT   shift, and go to state 76
+    T_LB    shift, and go to state 77
+
+    T_DOT     [reduce using rule 57 (expr)]
+    T_LB      [reduce using rule 57 (expr)]
+    $default  reduce using rule 57 (expr)
+
+
+State 101
+
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   58     | expr T_MINUS expr .
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
+   73     | expr . T_LB error T_RB
+   74     | expr . T_LB expr error
+
+    T_STAR  shift, and go to state 72
+    T_DIV   shift, and go to state 73
+    T_DOT   shift, and go to state 76
+    T_LB    shift, and go to state 77
+
+    T_DOT     [reduce using rule 58 (expr)]
+    T_LB      [reduce using rule 58 (expr)]
+    $default  reduce using rule 58 (expr)
+
+
+State 102
+
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   59     | expr T_STAR expr .
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
+   73     | expr . T_LB error T_RB
+   74     | expr . T_LB expr error
+
+    T_DOT  shift, and go to state 76
+    T_LB   shift, and go to state 77
+
+    T_DOT     [reduce using rule 59 (expr)]
+    T_LB      [reduce using rule 59 (expr)]
+    $default  reduce using rule 59 (expr)
+
+
+State 103
+
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   60     | expr T_DIV expr .
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
+   73     | expr . T_LB error T_RB
+   74     | expr . T_LB expr error
+
+    T_DOT  shift, and go to state 76
+    T_LB   shift, and go to state 77
+
+    T_DOT     [reduce using rule 60 (expr)]
+    T_LB      [reduce using rule 60 (expr)]
+    $default  reduce using rule 60 (expr)
+
+
+State 104
+
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   54     | expr T_AND expr .
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
+   73     | expr . T_LB error T_RB
+   74     | expr . T_LB expr error
+
+    T_RELOP  shift, and go to state 69
+    T_PLUS   shift, and go to state 70
+    T_MINUS  shift, and go to state 71
+    T_STAR   shift, and go to state 72
+    T_DIV    shift, and go to state 73
+    T_DOT    shift, and go to state 76
+    T_LB     shift, and go to state 77
+
+    T_DOT     [reduce using rule 54 (expr)]
+    T_LB      [reduce using rule 54 (expr)]
+    $default  reduce using rule 54 (expr)
+
+
+State 105
+
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   55     | expr T_OR expr .
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
@@ -1678,45 +1655,45 @@ State 107
     T_DOT    shift, and go to state 76
     T_LB     shift, and go to state 77
 
-    T_DOT     [reduce using rule 57 (expr)]
-    T_LB      [reduce using rule 57 (expr)]
-    $default  reduce using rule 57 (expr)
+    T_DOT     [reduce using rule 55 (expr)]
+    T_LB      [reduce using rule 55 (expr)]
+    $default  reduce using rule 55 (expr)
+
+
+State 106
+
+   69 expr: expr T_DOT T_ID .
+
+    $default  reduce using rule 69 (expr)
+
+
+State 107
+
+   73 expr: expr T_LB error . T_RB
+
+    T_RB  shift, and go to state 126
 
 
 State 108
 
-   68 expr: expr T_DOT T_ID .
-
-    $default  reduce using rule 68 (expr)
-
-
-State 109
-
-   73 expr: expr T_LB error . T_RB
-
-    T_RB  shift, and go to state 128
-
-
-State 110
-
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
-   72     | expr T_LB expr . T_RB
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   68     | expr T_LB expr . T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
    74     | expr T_LB expr . error
 
-    error       shift, and go to state 129
+    error       shift, and go to state 127
     T_ASSIGNOP  shift, and go to state 68
     T_RELOP     shift, and go to state 69
     T_PLUS      shift, and go to state 70
@@ -1727,13 +1704,13 @@ State 110
     T_OR        shift, and go to state 75
     T_DOT       shift, and go to state 76
     T_LB        shift, and go to state 77
-    T_RB        shift, and go to state 130
+    T_RB        shift, and go to state 128
 
 
-State 111
+State 109
 
-   42 stmtList: error T_SEMI . stmtList
-   46 stmt: error T_SEMI .
+   35 stmtList: error T_SEMI . stmtList
+   39 stmt: error T_SEMI .
 
     error     shift, and go to state 79
     T_INT     shift, and go to state 63
@@ -1747,30 +1724,30 @@ State 111
     T_IF      shift, and go to state 81
     T_WHILE   shift, and go to state 82
 
-    error     [reduce using rule 46 (stmt)]
-    T_INT     [reduce using rule 46 (stmt)]
-    T_FLOAT   [reduce using rule 46 (stmt)]
-    T_ID      [reduce using rule 46 (stmt)]
-    T_MINUS   [reduce using rule 46 (stmt)]
-    T_NOT     [reduce using rule 46 (stmt)]
-    T_LP      [reduce using rule 46 (stmt)]
-    T_LC      [reduce using rule 46 (stmt)]
+    error     [reduce using rule 39 (stmt)]
+    T_INT     [reduce using rule 39 (stmt)]
+    T_FLOAT   [reduce using rule 39 (stmt)]
+    T_ID      [reduce using rule 39 (stmt)]
+    T_MINUS   [reduce using rule 39 (stmt)]
+    T_NOT     [reduce using rule 39 (stmt)]
+    T_LP      [reduce using rule 39 (stmt)]
+    T_LC      [reduce using rule 39 (stmt)]
     T_RC      reduce using rule 1 (epsilon)
-    T_RC      [reduce using rule 46 (stmt)]
-    T_RETURN  [reduce using rule 46 (stmt)]
-    T_IF      [reduce using rule 46 (stmt)]
-    T_WHILE   [reduce using rule 46 (stmt)]
+    T_RC      [reduce using rule 39 (stmt)]
+    T_RETURN  [reduce using rule 39 (stmt)]
+    T_IF      [reduce using rule 39 (stmt)]
+    T_WHILE   [reduce using rule 39 (stmt)]
 
     epsilon   go to state 83
     compSt    go to state 84
-    stmtList  go to state 131
+    stmtList  go to state 129
     stmt      go to state 86
     expr      go to state 87
 
 
-State 112
+State 110
 
-   43 stmtList: error T_RC . stmtList
+   36 stmtList: error T_RC . stmtList
 
     error     shift, and go to state 79
     T_INT     shift, and go to state 63
@@ -1788,30 +1765,30 @@ State 112
 
     epsilon   go to state 83
     compSt    go to state 84
-    stmtList  go to state 132
+    stmtList  go to state 130
     stmt      go to state 86
     expr      go to state 87
 
 
-State 113
+State 111
 
-   48 stmt: T_RETURN expr . T_SEMI
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   41 stmt: T_RETURN expr . T_SEMI
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
-    T_SEMI      shift, and go to state 133
+    T_SEMI      shift, and go to state 131
     T_ASSIGNOP  shift, and go to state 68
     T_RELOP     shift, and go to state 69
     T_PLUS      shift, and go to state 70
@@ -1824,79 +1801,79 @@ State 113
     T_LB        shift, and go to state 77
 
 
+State 112
+
+   42 stmt: T_IF T_LP . expr T_RP stmt
+   43     | T_IF T_LP . expr T_RP stmt T_ELSE stmt
+
+    T_INT    shift, and go to state 63
+    T_FLOAT  shift, and go to state 64
+    T_ID     shift, and go to state 46
+    T_MINUS  shift, and go to state 47
+    T_NOT    shift, and go to state 48
+    T_LP     shift, and go to state 49
+
+    expr  go to state 132
+
+
+State 113
+
+   44 stmt: T_WHILE T_LP . expr T_RP T_SEMI
+   45     | T_WHILE T_LP . expr T_RP stmt
+
+    T_INT    shift, and go to state 63
+    T_FLOAT  shift, and go to state 64
+    T_ID     shift, and go to state 46
+    T_MINUS  shift, and go to state 47
+    T_NOT    shift, and go to state 48
+    T_LP     shift, and go to state 49
+
+    expr  go to state 133
+
+
 State 114
-
-   49 stmt: T_IF T_LP . expr T_RP stmt
-   50     | T_IF T_LP . expr T_RP stmt T_ELSE stmt
-
-    T_INT    shift, and go to state 63
-    T_FLOAT  shift, and go to state 64
-    T_ID     shift, and go to state 46
-    T_MINUS  shift, and go to state 47
-    T_NOT    shift, and go to state 48
-    T_LP     shift, and go to state 49
-
-    expr  go to state 134
-
-
-State 115
-
-   51 stmt: T_WHILE T_LP . expr T_RP T_SEMI
-   52     | T_WHILE T_LP . expr T_RP stmt
-
-    T_INT    shift, and go to state 63
-    T_FLOAT  shift, and go to state 64
-    T_ID     shift, and go to state 46
-    T_MINUS  shift, and go to state 47
-    T_NOT    shift, and go to state 48
-    T_LP     shift, and go to state 49
-
-    expr  go to state 135
-
-
-State 116
 
    32 compSt: T_LC defList stmtList T_RC .
 
     $default  reduce using rule 32 (compSt)
 
 
+State 115
+
+   33 stmtList: stmt stmtList .
+
+    $default  reduce using rule 33 (stmtList)
+
+
+State 116
+
+   38 stmt: expr error . T_SEMI
+
+    T_SEMI  shift, and go to state 134
+
+
 State 117
 
-   40 stmtList: stmt stmtList .
+   37 stmt: expr T_SEMI .
 
-    $default  reduce using rule 40 (stmtList)
+    $default  reduce using rule 37 (stmt)
 
 
 State 118
 
-   45 stmt: expr error . T_SEMI
-
-    T_SEMI  shift, and go to state 136
-
-
-State 119
-
-   44 stmt: expr T_SEMI .
-
-    $default  reduce using rule 44 (stmt)
-
-
-State 120
-
-   39 dec: varDec T_ASSIGNOP expr .
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
+   52 dec: varDec T_ASSIGNOP expr .
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
    73     | expr . T_LB error T_RB
    74     | expr . T_LB expr error
 
@@ -1911,19 +1888,43 @@ State 120
     T_DOT       shift, and go to state 76
     T_LB        shift, and go to state 77
 
-    $default  reduce using rule 39 (dec)
+    $default  reduce using rule 52 (dec)
+
+
+State 119
+
+   50 decList: dec T_COMMA decList .
+
+    $default  reduce using rule 50 (decList)
+
+
+State 120
+
+   78 args: error T_COMMA . args
+
+    error    shift, and go to state 92
+    T_INT    shift, and go to state 63
+    T_FLOAT  shift, and go to state 64
+    T_ID     shift, and go to state 46
+    T_MINUS  shift, and go to state 47
+    T_NOT    shift, and go to state 48
+    T_LP     shift, and go to state 49
+
+    expr  go to state 94
+    args  go to state 135
 
 
 State 121
 
-   37 decList: dec T_COMMA decList .
+   79 args: error T_RP .
 
-    $default  reduce using rule 37 (decList)
+    $default  reduce using rule 79 (args)
 
 
 State 122
 
-   79 exprList: error T_COMMA . exprList
+   75 args: expr T_COMMA . args
+   77     | expr T_COMMA .
 
     error    shift, and go to state 92
     T_INT    shift, and go to state 63
@@ -1933,197 +1934,200 @@ State 122
     T_NOT    shift, and go to state 48
     T_LP     shift, and go to state 49
 
-    expr      go to state 95
-    exprList  go to state 137
+    T_RP  reduce using rule 77 (args)
+    T_RC  reduce using rule 77 (args)
+
+    expr  go to state 94
+    args  go to state 136
 
 
 State 123
-
-   80 exprList: error T_RP .
-
-    $default  reduce using rule 80 (exprList)
-
-
-State 124
-
-   78 exprList: expr T_COMMA . exprList
-
-    error    shift, and go to state 92
-    T_INT    shift, and go to state 63
-    T_FLOAT  shift, and go to state 64
-    T_ID     shift, and go to state 46
-    T_MINUS  shift, and go to state 47
-    T_NOT    shift, and go to state 48
-    T_LP     shift, and go to state 49
-
-    expr      go to state 95
-    exprList  go to state 138
-
-
-State 125
 
    66 expr: T_ID T_LP args T_RP .
 
     $default  reduce using rule 66 (expr)
 
 
+State 124
+
+   65 expr: expr T_ASSIGNOP T_LC T_RC .
+
+    $default  reduce using rule 65 (expr)
+
+
+State 125
+
+   64 expr: expr T_ASSIGNOP T_LC args . T_RC
+
+    T_RC  shift, and go to state 137
+
+
 State 126
-
-   54 expr: expr T_ASSIGNOP T_LC T_RC .
-
-    $default  reduce using rule 54 (expr)
-
-
-State 127
-
-   53 expr: expr T_ASSIGNOP T_LC exprList . T_RC
-
-    T_RC  shift, and go to state 139
-
-
-State 128
 
    73 expr: expr T_LB error T_RB .
 
     $default  reduce using rule 73 (expr)
 
 
-State 129
+State 127
 
    74 expr: expr T_LB expr error .
 
     $default  reduce using rule 74 (expr)
 
 
+State 128
+
+   68 expr: expr T_LB expr T_RB .
+
+    $default  reduce using rule 68 (expr)
+
+
+State 129
+
+   35 stmtList: error T_SEMI stmtList .
+
+    $default  reduce using rule 35 (stmtList)
+
+
 State 130
 
-   72 expr: expr T_LB expr T_RB .
+   36 stmtList: error T_RC stmtList .
 
-    $default  reduce using rule 72 (expr)
+    $default  reduce using rule 36 (stmtList)
 
 
 State 131
 
-   42 stmtList: error T_SEMI stmtList .
+   41 stmt: T_RETURN expr T_SEMI .
 
-    $default  reduce using rule 42 (stmtList)
+    $default  reduce using rule 41 (stmt)
 
 
 State 132
 
-   43 stmtList: error T_RC stmtList .
+   42 stmt: T_IF T_LP expr . T_RP stmt
+   43     | T_IF T_LP expr . T_RP stmt T_ELSE stmt
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
+   73     | expr . T_LB error T_RB
+   74     | expr . T_LB expr error
 
-    $default  reduce using rule 43 (stmtList)
+    T_ASSIGNOP  shift, and go to state 68
+    T_RELOP     shift, and go to state 69
+    T_PLUS      shift, and go to state 70
+    T_MINUS     shift, and go to state 71
+    T_STAR      shift, and go to state 72
+    T_DIV       shift, and go to state 73
+    T_AND       shift, and go to state 74
+    T_OR        shift, and go to state 75
+    T_DOT       shift, and go to state 76
+    T_RP        shift, and go to state 138
+    T_LB        shift, and go to state 77
 
 
 State 133
 
-   48 stmt: T_RETURN expr T_SEMI .
+   44 stmt: T_WHILE T_LP expr . T_RP T_SEMI
+   45     | T_WHILE T_LP expr . T_RP stmt
+   53 expr: expr . T_ASSIGNOP expr
+   54     | expr . T_AND expr
+   55     | expr . T_OR expr
+   56     | expr . T_RELOP expr
+   57     | expr . T_PLUS expr
+   58     | expr . T_MINUS expr
+   59     | expr . T_STAR expr
+   60     | expr . T_DIV expr
+   64     | expr . T_ASSIGNOP T_LC args T_RC
+   65     | expr . T_ASSIGNOP T_LC T_RC
+   68     | expr . T_LB expr T_RB
+   69     | expr . T_DOT T_ID
+   73     | expr . T_LB error T_RB
+   74     | expr . T_LB expr error
 
-    $default  reduce using rule 48 (stmt)
+    T_ASSIGNOP  shift, and go to state 68
+    T_RELOP     shift, and go to state 69
+    T_PLUS      shift, and go to state 70
+    T_MINUS     shift, and go to state 71
+    T_STAR      shift, and go to state 72
+    T_DIV       shift, and go to state 73
+    T_AND       shift, and go to state 74
+    T_OR        shift, and go to state 75
+    T_DOT       shift, and go to state 76
+    T_RP        shift, and go to state 139
+    T_LB        shift, and go to state 77
 
 
 State 134
 
-   49 stmt: T_IF T_LP expr . T_RP stmt
-   50     | T_IF T_LP expr . T_RP stmt T_ELSE stmt
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
-   73     | expr . T_LB error T_RB
-   74     | expr . T_LB expr error
+   38 stmt: expr error T_SEMI .
 
-    T_ASSIGNOP  shift, and go to state 68
-    T_RELOP     shift, and go to state 69
-    T_PLUS      shift, and go to state 70
-    T_MINUS     shift, and go to state 71
-    T_STAR      shift, and go to state 72
-    T_DIV       shift, and go to state 73
-    T_AND       shift, and go to state 74
-    T_OR        shift, and go to state 75
-    T_DOT       shift, and go to state 76
-    T_RP        shift, and go to state 140
-    T_LB        shift, and go to state 77
+    $default  reduce using rule 38 (stmt)
 
 
 State 135
 
-   51 stmt: T_WHILE T_LP expr . T_RP T_SEMI
-   52     | T_WHILE T_LP expr . T_RP stmt
-   53 expr: expr . T_ASSIGNOP T_LC exprList T_RC
-   54     | expr . T_ASSIGNOP T_LC T_RC
-   55     | expr . T_ASSIGNOP expr
-   56     | expr . T_AND expr
-   57     | expr . T_OR expr
-   58     | expr . T_RELOP expr
-   59     | expr . T_PLUS expr
-   60     | expr . T_MINUS expr
-   61     | expr . T_STAR expr
-   62     | expr . T_DIV expr
-   68     | expr . T_DOT T_ID
-   72     | expr . T_LB expr T_RB
-   73     | expr . T_LB error T_RB
-   74     | expr . T_LB expr error
+   78 args: error T_COMMA args .
 
-    T_ASSIGNOP  shift, and go to state 68
-    T_RELOP     shift, and go to state 69
-    T_PLUS      shift, and go to state 70
-    T_MINUS     shift, and go to state 71
-    T_STAR      shift, and go to state 72
-    T_DIV       shift, and go to state 73
-    T_AND       shift, and go to state 74
-    T_OR        shift, and go to state 75
-    T_DOT       shift, and go to state 76
-    T_RP        shift, and go to state 141
-    T_LB        shift, and go to state 77
+    $default  reduce using rule 78 (args)
 
 
 State 136
 
-   45 stmt: expr error T_SEMI .
+   75 args: expr T_COMMA args .
 
-    $default  reduce using rule 45 (stmt)
+    $default  reduce using rule 75 (args)
 
 
 State 137
 
-   79 exprList: error T_COMMA exprList .
+   64 expr: expr T_ASSIGNOP T_LC args T_RC .
 
-    $default  reduce using rule 79 (exprList)
+    $default  reduce using rule 64 (expr)
 
 
 State 138
 
-   78 exprList: expr T_COMMA exprList .
+   42 stmt: T_IF T_LP expr T_RP . stmt
+   43     | T_IF T_LP expr T_RP . stmt T_ELSE stmt
 
-    $default  reduce using rule 78 (exprList)
+    error     shift, and go to state 140
+    T_INT     shift, and go to state 63
+    T_FLOAT   shift, and go to state 64
+    T_ID      shift, and go to state 46
+    T_MINUS   shift, and go to state 47
+    T_NOT     shift, and go to state 48
+    T_LP      shift, and go to state 49
+    T_LC      shift, and go to state 31
+    T_RETURN  shift, and go to state 80
+    T_IF      shift, and go to state 81
+    T_WHILE   shift, and go to state 82
+
+    compSt  go to state 84
+    stmt    go to state 141
+    expr    go to state 87
 
 
 State 139
 
-   53 expr: expr T_ASSIGNOP T_LC exprList T_RC .
+   44 stmt: T_WHILE T_LP expr T_RP . T_SEMI
+   45     | T_WHILE T_LP expr T_RP . stmt
 
-    $default  reduce using rule 53 (expr)
-
-
-State 140
-
-   49 stmt: T_IF T_LP expr T_RP . stmt
-   50     | T_IF T_LP expr T_RP . stmt T_ELSE stmt
-
-    error     shift, and go to state 142
+    error     shift, and go to state 140
     T_INT     shift, and go to state 63
     T_FLOAT   shift, and go to state 64
     T_ID      shift, and go to state 46
+    T_SEMI    shift, and go to state 142
     T_MINUS   shift, and go to state 47
     T_NOT     shift, and go to state 48
     T_LP      shift, and go to state 49
@@ -2137,73 +2141,50 @@ State 140
     expr    go to state 87
 
 
+State 140
+
+   39 stmt: error . T_SEMI
+
+    T_SEMI  shift, and go to state 144
+
+
 State 141
 
-   51 stmt: T_WHILE T_LP expr T_RP . T_SEMI
-   52     | T_WHILE T_LP expr T_RP . stmt
+   42 stmt: T_IF T_LP expr T_RP stmt .
+   43     | T_IF T_LP expr T_RP stmt . T_ELSE stmt
 
-    error     shift, and go to state 142
-    T_INT     shift, and go to state 63
-    T_FLOAT   shift, and go to state 64
-    T_ID      shift, and go to state 46
-    T_SEMI    shift, and go to state 144
-    T_MINUS   shift, and go to state 47
-    T_NOT     shift, and go to state 48
-    T_LP      shift, and go to state 49
-    T_LC      shift, and go to state 31
-    T_RETURN  shift, and go to state 80
-    T_IF      shift, and go to state 81
-    T_WHILE   shift, and go to state 82
+    T_ELSE  shift, and go to state 145
 
-    compSt  go to state 84
-    stmt    go to state 145
-    expr    go to state 87
+    T_ELSE    [reduce using rule 42 (stmt)]
+    $default  reduce using rule 42 (stmt)
 
 
 State 142
 
-   46 stmt: error . T_SEMI
+   44 stmt: T_WHILE T_LP expr T_RP T_SEMI .
 
-    T_SEMI  shift, and go to state 146
+    $default  reduce using rule 44 (stmt)
 
 
 State 143
 
-   49 stmt: T_IF T_LP expr T_RP stmt .
-   50     | T_IF T_LP expr T_RP stmt . T_ELSE stmt
+   45 stmt: T_WHILE T_LP expr T_RP stmt .
 
-    T_ELSE  shift, and go to state 147
-
-    T_ELSE    [reduce using rule 49 (stmt)]
-    $default  reduce using rule 49 (stmt)
+    $default  reduce using rule 45 (stmt)
 
 
 State 144
 
-   51 stmt: T_WHILE T_LP expr T_RP T_SEMI .
+   39 stmt: error T_SEMI .
 
-    $default  reduce using rule 51 (stmt)
+    $default  reduce using rule 39 (stmt)
 
 
 State 145
 
-   52 stmt: T_WHILE T_LP expr T_RP stmt .
+   43 stmt: T_IF T_LP expr T_RP stmt T_ELSE . stmt
 
-    $default  reduce using rule 52 (stmt)
-
-
-State 146
-
-   46 stmt: error T_SEMI .
-
-    $default  reduce using rule 46 (stmt)
-
-
-State 147
-
-   50 stmt: T_IF T_LP expr T_RP stmt T_ELSE . stmt
-
-    error     shift, and go to state 142
+    error     shift, and go to state 140
     T_INT     shift, and go to state 63
     T_FLOAT   shift, and go to state 64
     T_ID      shift, and go to state 46
@@ -2216,12 +2197,12 @@ State 147
     T_WHILE   shift, and go to state 82
 
     compSt  go to state 84
-    stmt    go to state 148
+    stmt    go to state 146
     expr    go to state 87
 
 
-State 148
+State 146
 
-   50 stmt: T_IF T_LP expr T_RP stmt T_ELSE stmt .
+   43 stmt: T_IF T_LP expr T_RP stmt T_ELSE stmt .
 
-    $default  reduce using rule 50 (stmt)
+    $default  reduce using rule 43 (stmt)

@@ -457,13 +457,11 @@ compSt: T_LC defList stmtList T_RC
 // 语句列表
 stmtList: stmt stmtList
         {
-          $$ = $0;
-          if ($1 != NULL) {
-              TreeNode* temp = $0;
-              while (temp->nextSibling != NULL) {
-                  temp = temp->nextSibling;
-              }
-              temp->nextSibling = $1;
+          if ($2 != NULL) {
+              $1->nextSibling = $2;
+              $$ = $1;
+          } else {
+              $$ = $1;
           }
         }
         | epsilon
@@ -471,12 +469,12 @@ stmtList: stmt stmtList
         | error T_SEMI stmtList  // 同步到分号，然后继续解析
         {
           has_error = 0;
-          $$ = $2;
+          $$ = $3;
         }
         | error T_RC stmtList  // 同步到右大括号，然后继续解析
         {
           has_error = 0;
-          $$ = $2;
+          $$ = $3;
         }
         ;
 
@@ -484,7 +482,7 @@ stmtList: stmt stmtList
 stmt: expr T_SEMI
     {
       $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-      addChild($$, $0);
+      addChild($$, $1);
       TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
       addChild($$, semiNode);
     }
@@ -501,14 +499,14 @@ stmt: expr T_SEMI
       addChild($$, semiNode);
     }
     | compSt
-    { $$ = $0; }
+    { $$ = $1; }
     | T_RETURN expr T_SEMI
     {
       $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
       TreeNode* returnNode = createTreeNode(NODE_RETURN, "RETURN", yylineno);
       TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
       addChild($$, returnNode);
-      addChild($$, $1);
+      addChild($$, $2);
       addChild($$, semiNode);
     }
     | T_IF T_LP expr T_RP stmt
@@ -519,9 +517,9 @@ stmt: expr T_SEMI
       TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
       addChild($$, ifNode);
       addChild($$, lpNode);
-      addChild($$, $2);
+      addChild($$, $3);
       addChild($$, rpNode);
-      addChild($$, $4);
+      addChild($$, $5);
     }
     | T_IF T_LP expr T_RP stmt T_ELSE stmt
     {
@@ -532,11 +530,11 @@ stmt: expr T_SEMI
       TreeNode* elseNode = createTreeNode(NODE_ELSE, "ELSE", yylineno);
       addChild($$, ifNode);
       addChild($$, lpNode);
-      addChild($$, $2);
+      addChild($$, $3);
       addChild($$, rpNode);
-      addChild($$, $4);
+      addChild($$, $5);
       addChild($$, elseNode);
-      addChild($$, $6);
+      addChild($$, $7);
     }
     // a error type!
     | T_WHILE T_LP expr T_RP T_SEMI
@@ -550,7 +548,7 @@ stmt: expr T_SEMI
       TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
       addChild($$, whileNode);
       addChild($$, lpNode);
-      addChild($$, $2);
+      addChild($$, $3);
       addChild($$, rpNode);
       addChild($$, semiNode);
     }
@@ -562,9 +560,9 @@ stmt: expr T_SEMI
       TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
       addChild($$, whileNode);
       addChild($$, lpNode);
-      addChild($$, $2);
+      addChild($$, $3);
       addChild($$, rpNode);
-      addChild($$, $4);
+      addChild($$, $5);
     }
     ;
 
@@ -684,10 +682,10 @@ expr:
     | expr T_AND expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      addChild($$, $0);
+      addChild($$, $1);
       TreeNode* andNode = createTreeNode(NODE_AND, "&&", yylineno);
       addChild($$, andNode);
-      addChild($$, $2);
+      addChild($$, $3);
     }
     | expr T_OR expr
     {
@@ -869,15 +867,19 @@ expr:
 //         }
 
 // 实参列表
-args: expr
-    { $$ = $1; }
-    | expr T_COMMA args
+args: expr T_COMMA args
     {
       $$ = $1;
       $1->nextSibling = $3;
     }
-    | epsilon
-    { $$ = NULL; }
+    | expr
+    { $$ = $1; }
+    | expr T_COMMA
+    {
+      printf("Error type B at Line %d: Trailing comma in function call arguments.\n", yylineno);
+      has_error = 1;
+      $$ = $1;
+    }
     | error T_COMMA args  // 同步到逗号，然后继续解析
     {
       has_error = 1;
