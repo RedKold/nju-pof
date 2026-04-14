@@ -7,10 +7,14 @@ Rules useless in parser due to conflicts
 
    11 extDef: error T_SEMI
 
+   29 varList: paramDec T_COMMA
+
 
 State 10 conflicts: 3 shift/reduce, 1 reduce/reduce
+State 27 conflicts: 1 shift/reduce
 State 44 conflicts: 1 shift/reduce
 State 45 conflicts: 1 shift/reduce
+State 59 conflicts: 1 reduce/reduce
 State 62 conflicts: 1 shift/reduce
 State 65 conflicts: 2 shift/reduce
 State 66 conflicts: 2 shift/reduce
@@ -64,14 +68,13 @@ Grammar
    23       | varDec T_LB T_FLOAT T_RB
    24       | varDec T_LB expr T_RB
 
-   25 funDec: T_ID T_LP params T_RP
+   25 funDec: T_ID T_LP varList T_RP
+   26       | T_ID T_LP T_RP
 
-   26 params: paramDecList
-   27       | epsilon
-
-   28 paramDecList: paramDec
-   29             | paramDec T_COMMA paramDecList
-   30             | paramDec T_COMMA
+   27 varList: paramDec
+   28        | paramDec T_COMMA varList
+   29        | paramDec T_COMMA
+   30        | epsilon
 
    31 paramDec: specifier varDec
 
@@ -141,9 +144,9 @@ Terminals, with rules where they appear
     error (256) 3 6 7 11 42 43 45 46 73 74 79 80
     T_INT <num> (258) 22 70
     T_FLOAT <real> (259) 23 71
-    T_ID <node> (260) 18 20 21 25 66 67 68 69
+    T_ID <node> (260) 18 20 21 25 26 66 67 68 69
     T_SEMI (261) 6 8 9 11 35 42 44 45 46 48 51
-    T_COMMA (262) 13 29 30 37 78 79
+    T_COMMA (262) 13 28 29 37 78 79
     T_ASSIGNOP (263) 39 53 54 55
     T_RELOP (264) 58
     T_PLUS (265) 59
@@ -155,8 +158,8 @@ Terminals, with rules where they appear
     T_DOT (271) 68
     T_NOT (272) 65
     T_TYPE <id> (273) 14
-    T_LP (274) 25 49 50 51 52 63 66 67
-    T_RP (275) 25 49 50 51 52 63 66 67 80
+    T_LP (274) 25 26 49 50 51 52 63 66 67
+    T_RP (275) 25 26 49 50 51 52 63 66 67 80
     T_LB (276) 22 23 24 72 73 74
     T_RB (277) 22 23 24 72 73
     T_LC (278) 16 32 53 54
@@ -175,7 +178,7 @@ Nonterminals, with rules where they appear
         on left: 0
     epsilon <node> (32)
         on left: 1
-        on right: 5 19 27 34 41 76
+        on right: 5 19 30 34 41 76
     program <node> (33)
         on left: 2 3
         on right: 0
@@ -204,45 +207,42 @@ Nonterminals, with rules where they appear
         on left: 21 22 23 24
         on right: 12 13 22 23 24 31 38 39
     funDec <node> (42)
-        on left: 25
+        on left: 25 26
         on right: 10
-    params <node> (43)
-        on left: 26 27
-        on right: 25
-    paramDecList <node> (44)
-        on left: 28 29 30
-        on right: 26 29
-    paramDec <node> (45)
+    varList <node> (43)
+        on left: 27 28 29 30
+        on right: 25 28
+    paramDec <node> (44)
         on left: 31
-        on right: 28 29 30
-    compSt <node> (46)
+        on right: 27 28 29
+    compSt <node> (45)
         on left: 32
         on right: 10 47
-    defList <node> (47)
+    defList <node> (46)
         on left: 33 34
         on right: 16 32 33
-    def <node> (48)
+    def <node> (47)
         on left: 35
         on right: 33
-    decList <node> (49)
+    decList <node> (48)
         on left: 36 37
         on right: 35 37
-    dec <node> (50)
+    dec <node> (49)
         on left: 38 39
         on right: 36 37
-    stmtList <node> (51)
+    stmtList <node> (50)
         on left: 40 41 42 43
         on right: 32 40 42 43
-    stmt <node> (52)
+    stmt <node> (51)
         on left: 44 45 46 47 48 49 50 51 52
         on right: 40 49 50 52
-    expr <node> (53)
+    expr <node> (52)
         on left: 53 54 55 56 57 58 59 60 61 62 63 64 65 66 67 68 69 70 71 72 73 74
         on right: 24 39 44 45 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63 64 65 68 72 73 74 77 78
-    args <node> (54)
+    args <node> (53)
         on left: 75 76
         on right: 66
-    exprList <node> (55)
+    exprList <node> (54)
         on left: 77 78 79 80
         on right: 53 75 78 79
 
@@ -454,7 +454,8 @@ State 18
 State 19
 
    21 varDec: T_ID .
-   25 funDec: T_ID . T_LP params T_RP
+   25 funDec: T_ID . T_LP varList T_RP
+   26       | T_ID . T_LP T_RP
 
     T_LP  shift, and go to state 27
 
@@ -530,18 +531,19 @@ State 26
 
 State 27
 
-   25 funDec: T_ID T_LP . params T_RP
+   25 funDec: T_ID T_LP . varList T_RP
+   26       | T_ID T_LP . T_RP
 
     T_TYPE    shift, and go to state 2
+    T_RP      shift, and go to state 37
     T_STRUCT  shift, and go to state 3
 
-    $default  reduce using rule 1 (epsilon)
+    T_RP  [reduce using rule 1 (epsilon)]
 
-    epsilon          go to state 37
-    specifier        go to state 38
+    epsilon          go to state 38
+    specifier        go to state 39
     structSpecifier  go to state 9
-    params           go to state 39
-    paramDecList     go to state 40
+    varList          go to state 40
     paramDec         go to state 41
 
 
@@ -644,12 +646,19 @@ State 36
 
 State 37
 
-   27 params: epsilon .
+   26 funDec: T_ID T_LP T_RP .
 
-    $default  reduce using rule 27 (params)
+    $default  reduce using rule 26 (funDec)
 
 
 State 38
+
+   30 varList: epsilon .
+
+    $default  reduce using rule 30 (varList)
+
+
+State 39
 
    31 paramDec: specifier . varDec
 
@@ -658,29 +667,22 @@ State 38
     varDec  go to state 57
 
 
-State 39
+State 40
 
-   25 funDec: T_ID T_LP params . T_RP
+   25 funDec: T_ID T_LP varList . T_RP
 
     T_RP  shift, and go to state 58
 
 
-State 40
-
-   26 params: paramDecList .
-
-    $default  reduce using rule 26 (params)
-
-
 State 41
 
-   28 paramDecList: paramDec .
-   29             | paramDec . T_COMMA paramDecList
-   30             | paramDec . T_COMMA
+   27 varList: paramDec .
+   28        | paramDec . T_COMMA varList
+   29        | paramDec . T_COMMA
 
     T_COMMA  shift, and go to state 59
 
-    $default  reduce using rule 28 (paramDecList)
+    $default  reduce using rule 27 (varList)
 
 
 State 42
@@ -887,24 +889,27 @@ State 57
 
 State 58
 
-   25 funDec: T_ID T_LP params T_RP .
+   25 funDec: T_ID T_LP varList T_RP .
 
     $default  reduce using rule 25 (funDec)
 
 
 State 59
 
-   29 paramDecList: paramDec T_COMMA . paramDecList
-   30             | paramDec T_COMMA .
+   28 varList: paramDec T_COMMA . varList
+   29        | paramDec T_COMMA .
 
     T_TYPE    shift, and go to state 2
     T_STRUCT  shift, and go to state 3
 
-    $default  reduce using rule 30 (paramDecList)
+    T_RP      reduce using rule 1 (epsilon)
+    T_RP      [reduce using rule 29 (varList)]
+    $default  reduce using rule 1 (epsilon)
 
-    specifier        go to state 38
+    epsilon          go to state 38
+    specifier        go to state 39
     structSpecifier  go to state 9
-    paramDecList     go to state 91
+    varList          go to state 91
     paramDec         go to state 41
 
 
@@ -1342,9 +1347,9 @@ State 90
 
 State 91
 
-   29 paramDecList: paramDec T_COMMA paramDecList .
+   28 varList: paramDec T_COMMA varList .
 
-    $default  reduce using rule 29 (paramDecList)
+    $default  reduce using rule 28 (varList)
 
 
 State 92

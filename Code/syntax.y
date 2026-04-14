@@ -157,7 +157,7 @@ int yyerror(const char* msg) {
 
 // 为每个非终结符和终结符指定类型
 %type <node> program extDefList extDef extDecList specifier structSpecifier optTag  tag varDec funDec compSt stmtList stmt
-%type <node> defList def decList dec expr args exprList params paramDecList paramDec epsilon
+%type <node> defList def decList dec expr args varList paramDec epsilon
 
 // 开始符号
 %start program
@@ -168,6 +168,9 @@ int yyerror(const char* msg) {
 epsilon: /* empty */
        { $$ = NULL; }
        ;
+
+
+// High-level Definitions
 
 // 程序结构：由外部定义列表组成
 program: extDefList
@@ -331,6 +334,7 @@ varDec: T_ID
 
         $$ = newVarDec;
       }
+      // after is error part!
       | varDec T_LB T_FLOAT T_RB
       {
         printf("Error type B at Line %d: Array dimension must be integer.\n", yylineno);
@@ -374,7 +378,7 @@ varDec: T_ID
       ;
 
 // 函数声明：标识符+参数列表
-funDec: T_ID T_LP params T_RP
+funDec: T_ID T_LP varList T_RP
       {
         $$ = createTreeNode(NODE_FUNDEC, "FunDec", yylineno);
         addChild($$, $1);
@@ -386,30 +390,34 @@ funDec: T_ID T_LP params T_RP
         }
         addChild($$, rpNode);
       }
+      | T_ID T_LP T_RP
+      {
+        $$ = createTreeNode(NODE_FUNDEC, "FunDec", yylineno);
+        addChild($$, $1);
+        TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
+        TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
+        addChild($$, lpNode);
+        addChild($$, rpNode);
+      }
       ;
 
-// 参数列表
-params: paramDecList
+// 变量列表（函数参数列表）
+varList: paramDec
       { $$ = $1; }
+      | paramDec T_COMMA varList
+      {
+        $$ = $1;
+        $1->nextSibling = $3;
+      }
+      | paramDec T_COMMA
+      {
+        printf("Error type B at Line %d: Trailing comma in function parameters.\n", yylineno);
+        has_error = 1;
+        $$ = $1;
+      }
       | epsilon
       { $$ = NULL; }
       ;
-
-// 参数声明列表
-paramDecList: paramDec
-            { $$ = $1; }
-            | paramDec T_COMMA paramDecList
-            {
-              $$ = $1;
-              $1->nextSibling = $3;
-            }
-            | paramDec T_COMMA
-            {
-              printf("Error type B at Line %d: Trailing comma in function parameters.\n", yylineno);
-              has_error = 1;
-              $$ = $1;
-            }
-            ;
 
 // 参数声明：类型说明符+变量声明
 paramDec: specifier varDec
@@ -419,6 +427,12 @@ paramDec: specifier varDec
           addChild($$, $2);
         }
         ;
+
+
+/*
+----- STATEMENTS -----
+*/
+
 
 // 复合语句：包含声明和语句
 compSt: T_LC defList stmtList T_RC
@@ -438,6 +452,125 @@ compSt: T_LC defList stmtList T_RC
         addChild($$, rcNode);
       }
       ;
+
+
+// 语句列表
+stmtList: stmt stmtList
+        {
+          $$ = $0;
+          if ($1 != NULL) {
+              TreeNode* temp = $0;
+              while (temp->nextSibling != NULL) {
+                  temp = temp->nextSibling;
+              }
+              temp->nextSibling = $1;
+          }
+        }
+        | epsilon
+        { $$ = NULL; }
+        | error T_SEMI stmtList  // 同步到分号，然后继续解析
+        {
+          has_error = 0;
+          $$ = $2;
+        }
+        | error T_RC stmtList  // 同步到右大括号，然后继续解析
+        {
+          has_error = 0;
+          $$ = $2;
+        }
+        ;
+
+// 语句：表达式语句、复合语句、if语句、while语句、return语句
+stmt: expr T_SEMI
+    {
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      addChild($$, $0);
+      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
+      addChild($$, semiNode);
+    }
+    | expr error T_SEMI
+    {
+      has_error = 0;
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+    }
+    | error T_SEMI
+    {
+      has_error = 0;
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
+      addChild($$, semiNode);
+    }
+    | compSt
+    { $$ = $0; }
+    | T_RETURN expr T_SEMI
+    {
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      TreeNode* returnNode = createTreeNode(NODE_RETURN, "RETURN", yylineno);
+      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
+      addChild($$, returnNode);
+      addChild($$, $1);
+      addChild($$, semiNode);
+    }
+    | T_IF T_LP expr T_RP stmt
+    {
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      TreeNode* ifNode = createTreeNode(NODE_IF, "IF", yylineno);
+      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
+      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
+      addChild($$, ifNode);
+      addChild($$, lpNode);
+      addChild($$, $2);
+      addChild($$, rpNode);
+      addChild($$, $4);
+    }
+    | T_IF T_LP expr T_RP stmt T_ELSE stmt
+    {
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      TreeNode* ifNode = createTreeNode(NODE_IF, "IF", yylineno);
+      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
+      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
+      TreeNode* elseNode = createTreeNode(NODE_ELSE, "ELSE", yylineno);
+      addChild($$, ifNode);
+      addChild($$, lpNode);
+      addChild($$, $2);
+      addChild($$, rpNode);
+      addChild($$, $4);
+      addChild($$, elseNode);
+      addChild($$, $6);
+    }
+    // a error type!
+    | T_WHILE T_LP expr T_RP T_SEMI
+    {
+      printf("Error type B at Line %d: Empty while statement body.\n", yylineno);
+      has_error = 0;
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      TreeNode* whileNode = createTreeNode(NODE_WHILE, "WHILE", yylineno);
+      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
+      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
+      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
+      addChild($$, whileNode);
+      addChild($$, lpNode);
+      addChild($$, $2);
+      addChild($$, rpNode);
+      addChild($$, semiNode);
+    }
+    | T_WHILE T_LP expr T_RP stmt
+    {
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      TreeNode* whileNode = createTreeNode(NODE_WHILE, "WHILE", yylineno);
+      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
+      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
+      addChild($$, whileNode);
+      addChild($$, lpNode);
+      addChild($$, $2);
+      addChild($$, rpNode);
+      addChild($$, $4);
+    }
+    ;
+
+/*
+----- LOCAL DEFINITIONS -----
+*/
 
 // 定义列表
 defList: def defList
@@ -511,172 +644,11 @@ dec: varDec
    }
    ;
 
-// 语句列表
-stmtList: stmt stmtList
-        {
-          $$ = $1;
-          if ($2 != NULL) {
-              TreeNode* temp = $1;
-              while (temp->nextSibling != NULL) {
-                  temp = temp->nextSibling;
-              }
-              temp->nextSibling = $2;
-          }
-        }
-        | epsilon
-        { $$ = NULL; }
-        | error T_SEMI stmtList  // 同步到分号，然后继续解析
-        {
-          has_error = 1;
-          $$ = $3;
-        }
-        | error T_RC stmtList  // 同步到右大括号，然后继续解析
-        {
-          has_error = 1;
-          $$ = $3;
-        }
-        ;
 
-// 语句：表达式语句、复合语句、if语句、while语句、return语句
-stmt: expr T_SEMI
-    {
-      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-      addChild($$, $1);
-      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
-      addChild($$, semiNode);
-    }
-    | expr error T_SEMI
-    {
-      has_error = 1;
-      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-    }
-    | error T_SEMI
-    {
-      has_error = 1;
-      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
-      addChild($$, semiNode);
-    }
-    | compSt
-    { $$ = $1; }
-    | T_RETURN expr T_SEMI
-    {
-      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-      TreeNode* returnNode = createTreeNode(NODE_RETURN, "RETURN", yylineno);
-      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
-      addChild($$, returnNode);
-      addChild($$, $2);
-      addChild($$, semiNode);
-    }
-    | T_IF T_LP expr T_RP stmt
-    {
-      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-      TreeNode* ifNode = createTreeNode(NODE_IF, "IF", yylineno);
-      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
-      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
-      addChild($$, ifNode);
-      addChild($$, lpNode);
-      addChild($$, $3);
-      addChild($$, rpNode);
-      addChild($$, $5);
-    }
-    | T_IF T_LP expr T_RP stmt T_ELSE stmt
-    {
-      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-      TreeNode* ifNode = createTreeNode(NODE_IF, "IF", yylineno);
-      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
-      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
-      TreeNode* elseNode = createTreeNode(NODE_ELSE, "ELSE", yylineno);
-      addChild($$, ifNode);
-      addChild($$, lpNode);
-      addChild($$, $3);
-      addChild($$, rpNode);
-      addChild($$, $5);
-      addChild($$, elseNode);
-      addChild($$, $7);
-    }
-    | T_WHILE T_LP expr T_RP T_SEMI
-    {
-      printf("Error type B at Line %d: Empty while statement body.\n", yylineno);
-      has_error = 1;
-      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-      TreeNode* whileNode = createTreeNode(NODE_WHILE, "WHILE", yylineno);
-      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
-      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
-      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
-      addChild($$, whileNode);
-      addChild($$, lpNode);
-      addChild($$, $3);
-      addChild($$, rpNode);
-      addChild($$, semiNode);
-    }
-    | T_WHILE T_LP expr T_RP stmt
-    {
-      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
-      TreeNode* whileNode = createTreeNode(NODE_WHILE, "WHILE", yylineno);
-      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
-      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
-      addChild($$, whileNode);
-      addChild($$, lpNode);
-      addChild($$, $3);
-      addChild($$, rpNode);
-      addChild($$, $5);
-    }
-    ;
 
 // 表达式：可选一元运算的加法表达式
-expr: expr T_ASSIGNOP T_LC exprList T_RC
-    {
-      // 检查数组声明和初始化的匹配性
-      // 首先获取数组声明的大小
-      int declared_size = -1;
-      TreeNode* temp = $1;
-
-      // 找到数组维度
-      while (temp) {
-        if (temp->type == NODE_VARDEC) {
-          // varDec可能包含数组维度
-          TreeNode* child = temp->firstChild;
-          while (child) {
-            if (child->type == NODE_INT) {
-              declared_size = child->intVal;
-              break;
-            }
-            child = child->nextSibling;
-          }
-        }
-
-        temp = temp->firstChild;
-      }
-
-      // 计算初始化元素的数量
-      int initialized_count = 0;
-      temp = $4;
-      if (temp) {
-        initialized_count = 1;
-        while (temp->nextSibling) {
-          initialized_count++;
-          temp = temp->nextSibling;
-        }
-      }
-
-      if (declared_size != -1 && declared_size != initialized_count) {
-        printf("Error type B at Line %d: Array dimension %d does not match initialization size %d.\n",
-               yylineno, declared_size, initialized_count);
-      } else {
-        printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
-      }
-
-      has_error = 1;
-      $$ = NULL;
-    }
-    | expr T_ASSIGNOP T_LC T_RC
-    {
-      printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
-      has_error = 1;
-      $$ = NULL;
-    }
-    | expr T_ASSIGNOP expr
+expr: 
+    expr T_ASSIGNOP expr
     {
       // 检查是否是数组初始化
       int is_array = 0;
@@ -712,10 +684,10 @@ expr: expr T_ASSIGNOP T_LC exprList T_RC
     | expr T_AND expr
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      addChild($$, $1);
+      addChild($$, $0);
       TreeNode* andNode = createTreeNode(NODE_AND, "&&", yylineno);
       addChild($$, andNode);
-      addChild($$, $3);
+      addChild($$, $2);
     }
     | expr T_OR expr
     {
@@ -781,7 +753,59 @@ expr: expr T_ASSIGNOP T_LC exprList T_RC
       addChild($$, notNode);
       addChild($$, $2);
     }
-    | T_ID T_LP args T_RP
+    | 
+    expr T_ASSIGNOP T_LC args T_RC
+    {
+      // 检查数组声明和初始化的匹配性
+      // 首先获取数组声明的大小
+      int declared_size = -1;
+      TreeNode* temp = $1;
+
+      // 找到数组维度
+      while (temp) {
+        if (temp->type == NODE_VARDEC) {
+          // varDec可能包含数组维度
+          TreeNode* child = temp->firstChild;
+          while (child) {
+            if (child->type == NODE_INT) {
+              declared_size = child->intVal;
+              break;
+            }
+            child = child->nextSibling;
+          }
+        }
+
+        temp = temp->firstChild;
+      }
+
+      // 计算初始化元素的数量
+      int initialized_count = 0;
+      temp = $4;
+      if (temp) {
+        initialized_count = 1;
+        while (temp->nextSibling) {
+          initialized_count++;
+          temp = temp->nextSibling;
+        }
+      }
+
+      if (declared_size != -1 && declared_size != initialized_count) {
+        printf("Error type B at Line %d: Array dimension %d does not match initialization size %d.\n",
+               yylineno, declared_size, initialized_count);
+      } else {
+        printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
+      }
+
+      has_error = 1;
+      $$ = NULL;
+    }
+    | expr T_ASSIGNOP T_LC T_RC
+    {
+      printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
+      has_error = 1;
+      $$ = NULL;
+    }
+    |  T_ID T_LP args T_RP
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
       addChild($$, $1);
@@ -791,6 +815,14 @@ expr: expr T_ASSIGNOP T_LC exprList T_RC
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
       addChild($$, $1);
+    }
+    | expr T_LB expr T_RB
+    {
+      $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
+      TreeNode* idxNode = createTreeNode(NODE_EXPR, "ArrayIndex", yylineno);
+      addChild(idxNode, $3);
+      addChild($$, idxNode);
     }
     | expr T_DOT T_ID
     {
@@ -805,7 +837,7 @@ expr: expr T_ASSIGNOP T_LC exprList T_RC
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
       addChild($$, $1);
     }
-    | T_INT
+    |  T_INT
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
       TreeNode* intNode = createTreeNode(NODE_INT, "INT", yylineno);
@@ -818,14 +850,6 @@ expr: expr T_ASSIGNOP T_LC exprList T_RC
       TreeNode* floatNode = createTreeNode(NODE_FLOAT, "FLOAT", yylineno);
       floatNode->floatVal = yylval.real;
       addChild($$, floatNode);
-    }
-    | expr T_LB expr T_RB
-    {
-      $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      addChild($$, $1);
-      TreeNode* idxNode = createTreeNode(NODE_EXPR, "ArrayIndex", yylineno);
-      addChild(idxNode, $3);
-      addChild($$, idxNode);
     }
     | expr T_LB error T_RB
     {
@@ -845,31 +869,26 @@ expr: expr T_ASSIGNOP T_LC exprList T_RC
 //         }
 
 // 实参列表
-args: exprList
+args: expr
     { $$ = $1; }
+    | expr T_COMMA args
+    {
+      $$ = $1;
+      $1->nextSibling = $3;
+    }
     | epsilon
     { $$ = NULL; }
+    | error T_COMMA args  // 同步到逗号，然后继续解析
+    {
+      has_error = 1;
+      $$ = $3;
+    }
+    | error T_RP  // 同步到右括号，然后结束
+    {
+      has_error = 1;
+      $$ = NULL;
+    }
     ;
-
-// 实参表达式列表
-exprList: expr
-        { $$ = $1; }
-        | expr T_COMMA exprList
-        {
-          $$ = $1;
-          $1->nextSibling = $3;
-        }
-        | error T_COMMA exprList  // 同步到逗号，然后继续解析
-        {
-          has_error = 1;
-          $$ = $3;
-        }
-        | error T_RP  // 同步到右括号，然后结束
-        {
-          has_error = 1;
-          $$ = NULL;
-        }
-        ;
 
 %%
 extern int yylex();
