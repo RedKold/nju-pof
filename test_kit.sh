@@ -8,7 +8,7 @@ TEST_DIR="/home/saaya/pof/lab1/Resources/Tests"
 INPUT_DIR="$TEST_DIR/inputs"
 EXPECT_DIR="$TEST_DIR/expects"
 PARSER="/home/saaya/pof/lab1/Code/parser"
-TEMP_DIR="/tmp/parser_test_outputs"
+TEMP_DIR="$TEST_DIR/tmp/parser_test_outputs"
 
 # Colors for output
 RED='\033[0;31m'
