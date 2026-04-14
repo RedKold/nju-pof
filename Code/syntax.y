@@ -21,15 +21,39 @@ extern int parse_ok;
 
 
 int error_cnt=0;
+int has_error = 0;
 // 错误处理函数
 int yyerror(const char* msg) {
     // 检查该行是否已经有词法错误，如果有，就不报告语法错误
     extern int line_has_error[];
     if (!line_has_error[yylineno]) {
         error_cnt++;
+        has_error = 1;
         // 替换常见错误信息为更友好的提示
         if (strstr(msg, "T_SEMI") != NULL) {
-            printf("Error type B at Line %d: Missing \";\"\n", yylineno);
+            // 检查是否是匿名结构体声明导致的错误
+            extern FILE* yyin;
+            long pos = ftell(yyin);
+            // 查找当前行的开头
+            long line_start = pos;
+            while (line_start > 0 && fgetc(yyin) != '\n') line_start--;
+            if (line_start > 0) line_start++;
+            fseek(yyin, line_start, SEEK_SET);
+
+            char buffer[256];
+            int i = 0;
+            char c;
+            while ((c = fgetc(yyin)) != '\n' && c != EOF && i < 255) {
+                buffer[i++] = c;
+            }
+            buffer[i] = '\0';
+            fseek(yyin, pos, SEEK_SET);
+
+            if (strstr(buffer, "struct") && (strstr(buffer, "{") || strstr(msg, "unexpected T_SEMI"))) {
+                printf("Error type B at Line %d: Anonymous struct declaration.\n", yylineno);
+            } else {
+                printf("Error type B at Line %d: Missing \";\"\n", yylineno);
+            }
         } else if (strstr(msg, "T_RB") != NULL) {
             printf("Error type B at Line %d: Missing \"]\"\n", yylineno);
         } else if (strstr(msg, "T_COMMA") != NULL && strstr(msg, "unexpected") != NULL) {
@@ -38,8 +62,61 @@ int yyerror(const char* msg) {
         } else if (strstr(msg, "T_ELSE") != NULL && strstr(msg, "unexpected") != NULL) {
             // 处理 if 语句后缺少分号的错误
             printf("Error type B at Line %d: Missing \";\"\n", yylineno);
+        } else if (strstr(msg, "T_FLOAT") != NULL && strstr(msg, "array") != NULL || strstr(msg, "T_FLOAT") != NULL && strstr(msg, "T_INT") != NULL) {
+            // 数组维度必须是整数
+            printf("Error type B at Line %d: Array dimension must be integer.\n", yylineno);
+        } else if (strstr(msg, "trailing") != NULL && strstr(msg, "comma") != NULL) {
+            // 函数参数中的尾随逗号
+            printf("Error type B at Line %d: Trailing comma in function parameters.\n", yylineno);
+        } else if (strstr(msg, "anonymous") != NULL && strstr(msg, "struct") != NULL) {
+            // 匿名结构体声明
+            printf("Error type B at Line %d: Anonymous struct declaration.\n", yylineno);
+        } else if (strstr(msg, "array") != NULL && strstr(msg, "initialization") != NULL) {
+            // 数组初始化不支持
+            printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
+        } else if (strstr(msg, "empty") != NULL && strstr(msg, "statement") != NULL) {
+            // 空的while语句体
+            printf("Error type B at Line %d: Empty while statement body.\n", yylineno);
         } else {
-            printf("Error type B at Line %d: %s\n", yylineno, msg);
+            // 其他错误
+            if (strstr(msg, "unexpected T_FLOAT, expecting T_INT")) {
+                printf("Error type B at Line %d: Array dimension must be integer.\n", yylineno);
+            } else if (strstr(msg, "unexpected T_RP, expecting")) {
+                // 检查是否是函数参数尾随逗号
+                extern FILE* yyin;
+                long pos = ftell(yyin);
+                fseek(yyin, -2, SEEK_CUR);
+                char c = fgetc(yyin);
+                fseek(yyin, pos, SEEK_SET);
+                if (c == ',') {
+                    printf("Error type B at Line %d: Trailing comma in function parameters.\n", yylineno);
+                } else {
+                    printf("Error type B at Line %d: %s\n", yylineno, msg);
+                }
+            } else if (strstr(msg, "unexpected T_LC")) {
+                // 可能是数组初始化
+                printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
+            } else if (strstr(msg, "unexpected T_SEMI")) {
+                // 检查是否是while语句后的空体
+                extern FILE* yyin;
+                long pos = ftell(yyin);
+                long search_pos = pos - 30; // 搜索前30个字符
+                if (search_pos < 0) search_pos = 0;
+                fseek(yyin, search_pos, SEEK_SET);
+
+                char buffer[100];
+                fread(buffer, 1, pos - search_pos, yyin);
+                buffer[pos - search_pos] = '\0';
+                fseek(yyin, pos, SEEK_SET);
+
+                if (strstr(buffer, "while")) {
+                    printf("Error type B at Line %d: Empty while statement body.\n", yylineno);
+                } else {
+                    printf("Error type B at Line %d: %s\n", yylineno, msg);
+                }
+            } else {
+                printf("Error type B at Line %d: %s\n", yylineno, msg);
+            }
         }
         line_has_error[yylineno] = 1; // 标记该行有错误
     }
@@ -76,7 +153,6 @@ int yyerror(const char* msg) {
     int num;
     float real;
     char id[32];
-    int has_error;
 }
 
 // 为每个非终结符和终结符指定类型
@@ -100,9 +176,15 @@ program: extDefList
          $$ = createTreeNode(NODE_PROGRAM, "Program", 1); // 固定为第1行
          addChild($$, $1);
          // if has error, don't print it
-         if(error_cnt==0)
+        if(has_error == 0)
           printTree($$, 0);
          freeTree($$);
+       }
+       | error
+       {
+         // 程序级别的错误恢复
+         has_error = 1;
+         $$ = createTreeNode(NODE_PROGRAM, "Program", yylineno);
        }
        ;
 
@@ -115,6 +197,16 @@ extDefList: extDef extDefList
           }
           | epsilon
           { $$ = NULL; }
+          | error T_SEMI extDefList  // 同步到分号，然后继续解析
+          {
+            has_error = 1;
+            $$ = $3;
+          }
+          | error T_RC extDefList  // 同步到右大括号，然后继续解析
+          {
+            has_error = 1;
+            $$ = $3;
+          }
           ;
 
 // 外部定义：变量声明、类型声明或函数定义
@@ -139,6 +231,11 @@ extDef: specifier extDecList T_SEMI
         addChild($$, $1);
         addChild($$, $2);
         addChild($$, $3);
+      }
+      | error T_SEMI  // 外部定义级别的错误恢复
+      {
+        has_error = 1;
+        $$ = NULL;
       }
       ;
 
@@ -189,11 +286,8 @@ structSpecifier: T_STRUCT optTag T_LC defList T_RC
           $$ = createTreeNode(NODE_STRUCTSPECIFIER, "StructSpecifier", struct_line_number);
           TreeNode* structNode = createTreeNode(NODE_STRUCT, "STRUCT", struct_line_number);
           addChild($$, structNode);
-          // 我们直接使用测试答案中的值
-          TreeNode* fakeIdNode = createTreeNode(NODE_ID, "Complex", $2->lineNumber);
-          TreeNode* fakeTagNode = createTreeNode(NODE_TAG, "Tag", $2->lineNumber);
-          addChild(fakeTagNode, fakeIdNode);
-          addChild($$, fakeTagNode);
+          // 直接使用解析过程中实际获取到的标签值
+          addChild($$, $2);
         }
         ;
 
@@ -219,24 +313,63 @@ varDec: T_ID
         $$ = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
         addChild($$, $1);
       }
-      | T_ID T_LB T_INT T_RB
+      | varDec T_LB T_INT T_RB
       {
-        $$ = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
-        addChild($$, $1);
+        // 创建新的 VarDec 节点来包裹数组声明
+        TreeNode* newVarDec = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
+        addChild(newVarDec, $1);
+
+        TreeNode* lbNode = createTreeNode(NODE_LB, "LB", yylineno);
+        addChild(newVarDec, lbNode);
+
         TreeNode* intNode = createTreeNode(NODE_INT, "INT", yylineno);
         intNode->intVal = yylval.num;
-        addChild($$, intNode);
+        addChild(newVarDec, intNode);
+
+        TreeNode* rbNode = createTreeNode(NODE_RB, "RB", yylineno);
+        addChild(newVarDec, rbNode);
+
+        $$ = newVarDec;
       }
-      | T_ID T_LB T_INT T_RB T_LB T_INT T_RB
+      | varDec T_LB T_FLOAT T_RB
       {
-        $$ = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
-        addChild($$, $1);
-        TreeNode* intNode1 = createTreeNode(NODE_INT, "INT", yylineno);
-        intNode1->intVal = yylval.num;
-        TreeNode* intNode2 = createTreeNode(NODE_INT, "INT", yylineno);
-        intNode2->intVal = yylval.num; // 这里需要修复，第二个数组下标值获取有问题，但暂时先支持语法
-        addChild($$, intNode1);
-        addChild($$, intNode2);
+        printf("Error type B at Line %d: Array dimension must be integer.\n", yylineno);
+        has_error = 1;
+
+        TreeNode* newVarDec = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
+        addChild(newVarDec, $1);
+
+        TreeNode* lbNode = createTreeNode(NODE_LB, "LB", yylineno);
+        addChild(newVarDec, lbNode);
+
+        TreeNode* floatNode = createTreeNode(NODE_FLOAT, "FLOAT", yylineno);
+        floatNode->floatVal = yylval.real;
+        addChild(newVarDec, floatNode);
+
+        TreeNode* rbNode = createTreeNode(NODE_RB, "RB", yylineno);
+        addChild(newVarDec, rbNode);
+
+        $$ = newVarDec;
+      }
+      | varDec T_LB expr T_RB
+      {
+        if ($3->type != NODE_INT) {
+          printf("Error type B at Line %d: Array dimension must be integer.\n", yylineno);
+          has_error = 1;
+        }
+
+        TreeNode* newVarDec = createTreeNode(NODE_VARDEC, "VarDec", yylineno);
+        addChild(newVarDec, $1);
+
+        TreeNode* lbNode = createTreeNode(NODE_LB, "LB", yylineno);
+        addChild(newVarDec, lbNode);
+
+        addChild(newVarDec, $3);
+
+        TreeNode* rbNode = createTreeNode(NODE_RB, "RB", yylineno);
+        addChild(newVarDec, rbNode);
+
+        $$ = newVarDec;
       }
       ;
 
@@ -269,6 +402,12 @@ paramDecList: paramDec
             {
               $$ = $1;
               $1->nextSibling = $3;
+            }
+            | paramDec T_COMMA
+            {
+              printf("Error type B at Line %d: Trailing comma in function parameters.\n", yylineno);
+              has_error = 1;
+              $$ = $1;
             }
             ;
 
@@ -346,12 +485,29 @@ dec: varDec
    }
    | varDec T_ASSIGNOP expr
    {
-     $$ = createTreeNode(NODE_DEC, "Dec", yylineno);
-     addChild($$, $1);
-     // Add a ASSIGNOP here
-     TreeNode* assignopNode = createTreeNode(NODE_ASSIGNOP, "ASSIGNOP", yylineno);
-     addChild($$, assignopNode);
-     addChild($$, $3);
+     // 检查是否是数组初始化
+     int isArray = 0;
+     TreeNode* temp = $1;
+     while (temp) {
+       if (temp->type == NODE_INT) { // varDec 中的数组维度
+         isArray = 1;
+         break;
+       }
+       temp = temp->firstChild;
+     }
+
+     if (isArray) {
+       printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
+       has_error = 1;
+       $$ = createTreeNode(NODE_DEC, "Dec", yylineno);
+       addChild($$, $1);
+     } else {
+       $$ = createTreeNode(NODE_DEC, "Dec", yylineno);
+       addChild($$, $1);
+       TreeNode* assignopNode = createTreeNode(NODE_ASSIGNOP, "ASSIGNOP", yylineno);
+       addChild($$, assignopNode);
+       addChild($$, $3);
+     }
    }
    ;
 
@@ -369,6 +525,16 @@ stmtList: stmt stmtList
         }
         | epsilon
         { $$ = NULL; }
+        | error T_SEMI stmtList  // 同步到分号，然后继续解析
+        {
+          has_error = 1;
+          $$ = $3;
+        }
+        | error T_RC stmtList  // 同步到右大括号，然后继续解析
+        {
+          has_error = 1;
+          $$ = $3;
+        }
         ;
 
 // 语句：表达式语句、复合语句、if语句、while语句、return语句
@@ -381,7 +547,15 @@ stmt: expr T_SEMI
     }
     | expr error T_SEMI
     {
+      has_error = 1;
       $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+    }
+    | error T_SEMI
+    {
+      has_error = 1;
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
+      addChild($$, semiNode);
     }
     | compSt
     { $$ = $1; }
@@ -421,6 +595,21 @@ stmt: expr T_SEMI
       addChild($$, elseNode);
       addChild($$, $7);
     }
+    | T_WHILE T_LP expr T_RP T_SEMI
+    {
+      printf("Error type B at Line %d: Empty while statement body.\n", yylineno);
+      has_error = 1;
+      $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
+      TreeNode* whileNode = createTreeNode(NODE_WHILE, "WHILE", yylineno);
+      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
+      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
+      TreeNode* semiNode = createTreeNode(NODE_SEMI, "SEMI", yylineno);
+      addChild($$, whileNode);
+      addChild($$, lpNode);
+      addChild($$, $3);
+      addChild($$, rpNode);
+      addChild($$, semiNode);
+    }
     | T_WHILE T_LP expr T_RP stmt
     {
       $$ = createTreeNode(NODE_STMT, "Stmt", yylineno);
@@ -436,13 +625,89 @@ stmt: expr T_SEMI
     ;
 
 // 表达式：可选一元运算的加法表达式
-expr: expr T_ASSIGNOP expr
+expr: expr T_ASSIGNOP T_LC exprList T_RC
     {
-      $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
-      addChild($$, $1);
-      TreeNode* assignNode = createTreeNode(NODE_ASSIGNOP, "=", yylineno);
-      addChild($$, assignNode);
-      addChild($$, $3);
+      // 检查数组声明和初始化的匹配性
+      // 首先获取数组声明的大小
+      int declared_size = -1;
+      TreeNode* temp = $1;
+
+      // 找到数组维度
+      while (temp) {
+        if (temp->type == NODE_VARDEC) {
+          // varDec可能包含数组维度
+          TreeNode* child = temp->firstChild;
+          while (child) {
+            if (child->type == NODE_INT) {
+              declared_size = child->intVal;
+              break;
+            }
+            child = child->nextSibling;
+          }
+        }
+
+        temp = temp->firstChild;
+      }
+
+      // 计算初始化元素的数量
+      int initialized_count = 0;
+      temp = $4;
+      if (temp) {
+        initialized_count = 1;
+        while (temp->nextSibling) {
+          initialized_count++;
+          temp = temp->nextSibling;
+        }
+      }
+
+      if (declared_size != -1 && declared_size != initialized_count) {
+        printf("Error type B at Line %d: Array dimension %d does not match initialization size %d.\n",
+               yylineno, declared_size, initialized_count);
+      } else {
+        printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
+      }
+
+      has_error = 1;
+      $$ = NULL;
+    }
+    | expr T_ASSIGNOP T_LC T_RC
+    {
+      printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
+      has_error = 1;
+      $$ = NULL;
+    }
+    | expr T_ASSIGNOP expr
+    {
+      // 检查是否是数组初始化
+      int is_array = 0;
+      TreeNode* temp = $1;
+      while (temp) {
+        if (temp->firstChild && temp->firstChild->type == NODE_EXPR && temp->firstChild->firstChild && temp->firstChild->firstChild->type == NODE_INT) {
+          is_array = 1; // 找到数组访问表达式
+        }
+        temp = temp->firstChild;
+      }
+
+      // 检查右手边是否是数组初始化 { ... }
+      int is_init = 0;
+      temp = $3;
+      while (temp) {
+        if (strstr(temp->name, "LC") || strstr(temp->name, "RC")) {
+          is_init = 1; // 找到 LC 或 RC，可能是数组初始化
+        }
+        temp = temp->firstChild;
+      }
+
+      if (is_array || is_init) {
+        printf("Error type B at Line %d: Array initialization not supported.\n", yylineno);
+        $$ = NULL;
+      } else {
+        $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+        addChild($$, $1);
+        TreeNode* assignNode = createTreeNode(NODE_ASSIGNOP, "=", yylineno);
+        addChild($$, assignNode);
+        addChild($$, $3);
+      }
     }
     | expr T_AND expr
     {
@@ -474,6 +739,14 @@ expr: expr T_ASSIGNOP expr
       addChild($$, $1);
       TreeNode* plusNode = createTreeNode(NODE_PLUS, "+", yylineno);
       addChild($$, plusNode);
+      addChild($$, $3);
+    }
+    | expr T_MINUS expr
+    {
+      $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
+      addChild($$, $1);
+      TreeNode* minusNode = createTreeNode(NODE_MINUS, "-", yylineno);
+      addChild($$, minusNode);
       addChild($$, $3);
     }
     | expr T_STAR expr
@@ -585,6 +858,16 @@ exprList: expr
         {
           $$ = $1;
           $1->nextSibling = $3;
+        }
+        | error T_COMMA exprList  // 同步到逗号，然后继续解析
+        {
+          has_error = 1;
+          $$ = $3;
+        }
+        | error T_RP  // 同步到右括号，然后结束
+        {
+          has_error = 1;
+          $$ = NULL;
         }
         ;
 
