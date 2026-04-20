@@ -32,7 +32,7 @@ syntax-c: $(YFILE)
 -include $(patsubst %.o, %.d, $(OBJS))
 
 # 定义的一些伪目标
-.PHONY: clean test
+.PHONY: clean test semantic-test
 test: parser
 	@echo "Running all tests..."
 	@cd .. && ./test_kit.sh
@@ -43,6 +43,11 @@ test-single: parser
 	else \
 		./parser ../Resources/Tests/inputs/$(TEST).cmm; \
 	fi
+
+# Semantic analysis tests
+semantic-test: parser
+	@echo "Running semantic analysis tests..."
+	@python3 ../Test/test_runner.py
 clean:
 	rm -f parser lex.yy.c syntax.tab.c syntax.tab.h syntax.output
 	rm -f $(OBJS) $(OBJS:.o=.d)

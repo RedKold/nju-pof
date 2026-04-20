@@ -18,6 +18,8 @@ extern int lc_line_number;     // for T_LC
 
 extern int parse_ok;
 
+// Global AST root for semantic analysis
+TreeNode* ast_root = NULL;
 
 
 int error_cnt=0;
@@ -181,7 +183,8 @@ program: extDefList
          // if has error, don't print it
         if(has_error == 0)
           printTree($$, 0);
-         freeTree($$);
+         // Store AST root for semantic analysis instead of freeing
+         ast_root = $$;
        }
        | error
        {
@@ -895,4 +898,6 @@ args: expr T_COMMA args
     ;
 
 %%
+// Declare the AST root for use in main.c
+TreeNode* ast_root;
 extern int yylex();

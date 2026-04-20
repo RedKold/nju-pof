@@ -84,7 +84,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 151 "./syntax.y"
+#line 153 "./syntax.y"
 
     TreeNode* node;  // 语法树节点指针
     int num;

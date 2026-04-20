@@ -1,0 +1,5 @@
+int main() {
+    int x = 10;
+    ??? // 未知 token
+    return 0;
+}
