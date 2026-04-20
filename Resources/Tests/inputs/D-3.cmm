@@ -1,8 +1,0 @@
-int main() {
-  int x /* counter */ = 0;
-  x = x + 1;
-  if /* check */ (x > 0) {
-    return x;
-  }
-  return 0;
-}

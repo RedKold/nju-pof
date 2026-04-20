@@ -1,4 +1,0 @@
-int main() {
-  float bad = 3.14.15;
-  return 0;
-}
