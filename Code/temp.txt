@@ -1,0 +1,199 @@
+// Analyze an Expr node - returns the Type of the expression
+static Type analyzeExpr(TreeNode* node) {
+    if (!node || node->type != NODE_EXPR) return NULL;
+    // When meet Exp, then the node and children node will use varible or function
+    // search the symbol table to identify these variable or function exists or not
+
+
+    // Don't analyze expressions in first pass
+    if (inFirstPass) return NULL;
+
+    TreeNode* child = node->firstChild;
+    if (!child) return NULL;
+
+    TreeNode* sibling = child->nextSibling;
+
+    // First check for special cases that start with non-ID nodes
+
+    // Case: Parentheses - ( expr )
+    if (child->type == NODE_LP) {
+        TreeNode* inner = child->nextSibling;
+        if (inner && inner->type == NODE_EXPR) {
+            return analyzeExpr(inner);
+        }
+        return NULL;
+    }
+
+    // Case: Unary operations - !expr or -expr
+    if (child->type == NODE_NOT || child->type == NODE_MINUS) {
+        TreeNode* operand = child->nextSibling;
+        if (operand) analyzeExpr(operand);
+        return NULL;
+    }
+
+    // Case: Integer literal
+    if (child->type == NODE_INT) {
+        return createBasicType(BASIC_INT);
+    }
+
+    // Case: Float literal
+    if (child->type == NODE_FLOAT) {
+        return createBasicType(BASIC_FLOAT);
+    }
+
+    // Now handle ID cases - could be variable, function call, assignment, array, struct, etc.
+    if (child->type == NODE_ID) {
+        // First, check what siblings we have to determine what kind of expression this is
+
+        // Check if it's a function call: ID followed by LP
+        int isFunctionCall = 0;
+        TreeNode* curr = sibling;
+        while (curr) {
+            if (curr->type == NODE_LP) {
+                isFunctionCall = 1;
+                break;
+            }
+            curr = curr->nextSibling;
+        }
+
+        if (isFunctionCall) {
+            // Function call
+            const char* funcName = child->name;
+            Symbol* sym = lookupSymbol(funcName);
+            if (!sym || sym->kind != SYMBOL_FUNCTION) {
+                // Error 2: Undefined function
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Undefined function \"%s\"", funcName);
+                semanticError(2, node->lineNumber, msg);
+            }
+            // TODO: Check arguments (Error 9)
+            return NULL;
+        }
+
+        // Check if it's an assignment: ID = expr
+        if (sibling && sibling->type == NODE_ASSIGNOP) {
+            // Analyze left side (check lvalue later - Error 6)
+            // For variable, we already know it's defined since we're in the ID case
+            // Wait, no - we need to check if the variable is defined!
+            const char* varName = child->name;
+            Symbol* sym = lookupSymbol(varName);
+            if (!sym) {
+                // Error 1: Undefined variable
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
+                semanticError(1, node->lineNumber, msg);
+            }
+            // Analyze right side
+            TreeNode* right = sibling->nextSibling;
+            if (right) analyzeExpr(right);
+            // TODO: Check type match (Error 5)
+            return NULL;
+        }
+
+        // Check if it's array indexing: ID [ expr ]
+        if (sibling && sibling->type == NODE_LB) {
+            // Check array variable is defined
+            const char* varName = child->name;
+            Symbol* sym = lookupSymbol(varName);
+            if (!sym) {
+                // Error 1: Undefined variable
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
+                semanticError(1, node->lineNumber, msg);
+            }
+            TreeNode* index = sibling->nextSibling;
+            if (index && index->type == NODE_EXPR) {
+                analyzeExpr(index); // Check index
+            }
+            // TODO: Error 10 (non-array), Error 12 (non-int index)
+            return NULL;
+        }
+
+        // Check if it's struct member access: ID . ID
+        if (sibling && sibling->type == NODE_DOT) {
+            // Check struct variable is defined
+            const char* varName = child->name;
+            Symbol* sym = lookupSymbol(varName);
+            if (!sym) {
+                // Error 1: Undefined variable
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
+                semanticError(1, node->lineNumber, msg);
+            }
+            // TODO: Error 13 (non-struct), Error 14 (undefined field)
+            return NULL;
+        }
+
+        // If none of the above, it's just a variable reference
+        const char* varName = child->name;
+        Symbol* sym = lookupSymbol(varName);
+        if (!sym) {
+            // Error 1: Undefined variable
+            char msg[64];
+            snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
+            semanticError(1, node->lineNumber, msg);
+            return NULL;
+        }
+        if (sym->kind == SYMBOL_VARIABLE) {
+            return sym->info.variableType;
+        } else if (sym->kind == SYMBOL_FUNCTION) {
+            // Function referenced without calling - could be an error
+            return NULL;
+        }
+        return NULL;
+    }
+
+    // Now handle cases where the child is another expression (binary ops, etc.)
+
+    // Case: Assignment - expr = expr (but left side is not a simple ID)
+    if (sibling && sibling->type == NODE_ASSIGNOP) {
+        // Analyze left side (check lvalue later - Error 6)
+        analyzeExpr(child);
+        // Analyze right side
+        TreeNode* right = sibling->nextSibling;
+        if (right) analyzeExpr(right);
+        // TODO: Check type match (Error 5)
+        return NULL;
+    }
+
+    // Case: Binary operations - expr OP expr
+    if (sibling && (sibling->type == NODE_PLUS || sibling->type == NODE_MINUS ||
+                     sibling->type == NODE_STAR || sibling->type == NODE_DIV ||
+                     sibling->type == NODE_RELOP || sibling->type == NODE_AND ||
+                     sibling->type == NODE_OR)) {
+        analyzeExpr(child);
+        TreeNode* right = sibling->nextSibling;
+        if (right) analyzeExpr(right);
+        // TODO: Check operand types (Error 7)
+        return NULL;
+    }
+
+    // Case: Array indexing - expr [ expr ] (but left side is not a simple ID)
+    if (sibling && sibling->type == NODE_LB) {
+        analyzeExpr(child); // Check array
+        TreeNode* index = sibling->nextSibling;
+        if (index && index->type == NODE_EXPR) {
+            analyzeExpr(index); // Check index
+        }
+        // TODO: Error 10 (non-array), Error 12 (non-int index)
+        return NULL;
+    }
+
+    // Case: Struct member access - expr . ID (but left side is not a simple ID)
+    if (sibling && sibling->type == NODE_DOT) {
+        analyzeExpr(child); // Check struct expression
+        // TODO: Error 13 (non-struct), Error 14 (undefined field)
+        return NULL;
+    }
+
+    // Recursively analyze all children for other cases
+    TreeNode* curr = child;
+    while (curr) {
+        if (curr->type == NODE_EXPR) {
+            analyzeExpr(curr);
+        }
+        curr = curr->nextSibling;
+    }
+
+    return NULL;
+}

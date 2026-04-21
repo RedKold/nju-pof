@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 
 // ==================== Symbol Table Configuration ====================
 
@@ -62,9 +63,21 @@ static Symbol* insertSymbol(const char* name, SymbolKind kind) {
     return symbol;
 }
 
+// ==================== Log Function ====================
+
+static void Log(const char* func, const char* msg, ...) {
+    va_list args;
+    va_start(args, msg);
+    printf("[%s] ", func);
+    vprintf(msg, args);
+    printf("\n");
+    va_end(args);
+}
+
 // Lookup a symbol in the hash table
 static Symbol* lookupSymbol(const char* name) {
     unsigned int hash = hashpjw(name);
+    Log(__func__, "Finding name: %s", name);
     Symbol* symbol = hashTable[hash];
 
     // For Requirement 3.2: find the symbol with the highest depth (innermost scope)
@@ -79,6 +92,13 @@ static Symbol* lookupSymbol(const char* name) {
             }
         }
         symbol = symbol->next;
+    }
+
+    if(found){
+        Log(__func__, "Found");
+    }
+    else{
+        Log(__func__, "Not found");
     }
 
     return found;
@@ -251,53 +271,65 @@ static FieldList analyzeDefListForFields(TreeNode* defListNode, int structLine) 
     FieldList head = NULL;
     FieldList tail = NULL;
 
-    if (!defListNode) return NULL;
+    // Traverse defList properly - each defList node has def as first child,
+    // and next defList as def's sibling
+    TreeNode* defList = defListNode;
+    while (defList && defList->type == NODE_DEFLIST) {
+        TreeNode* def = defList->firstChild;
+        if (def && def->type == NODE_DEF) {
+            // Def -> Specifier DecList SEMI
+            TreeNode* specifier = def->firstChild;
+            Type baseType = analyzeSpecifier(specifier);
 
-    TreeNode* def = defListNode->firstChild;
-    while (def && def->type == NODE_DEF) {
-        // Def -> Specifier DecList SEMI
-        TreeNode* specifier = def->firstChild;
-        Type baseType = analyzeSpecifier(specifier);
+            if (baseType) {
+                TreeNode* decList = specifier->nextSibling;
+                if (decList && decList->type == NODE_DECLIST) {
+                    // decList has either:
+                    // - one dec (decList: dec)
+                    // - dec, comma, decList (decList: dec COMMA decList)
+                    TreeNode* decListIter = decList;
+                    while (decListIter && decListIter->type == NODE_DECLIST) {
+                        TreeNode* dec = decListIter->firstChild;
+                        if (dec && dec->type == NODE_DEC) {
+                            TreeNode* varDec = dec->firstChild;
+                            if (varDec && varDec->type == NODE_VARDEC) {
+                                // Get the variable name from VarDec
+                                const char* fieldName = getIdentifierName(varDec);
+                                if (fieldName) {
+                                    // Build the complete type (including arrays)
+                                    Type fieldType = analyzeVarDec(varDec, baseType, false);
 
-        if (baseType) {
-            TreeNode* decList = specifier->nextSibling;
-            if (decList && decList->type == NODE_DECLIST) {
-                TreeNode* dec = decList->firstChild;
-                while (dec) {
-                    if (dec->type == NODE_DEC) {
-                        TreeNode* varDec = dec->firstChild;
-                        if (varDec && varDec->type == NODE_VARDEC) {
-                            // Get the variable name from VarDec
-                            const char* fieldName = getIdentifierName(varDec);
-                            if (fieldName) {
-                                // Build the complete type (including arrays)
-                                Type fieldType = analyzeVarDec(varDec, baseType, false);
-
-                                if (fieldType) {
-                                    // Check for field redefinition (Error 15)
-                                    if (fieldExists(head, fieldName)) {
-                                        semanticError(15, def->lineNumber, "Redefined field");
-                                        freeType(fieldType);
-                                    } else {
-                                        FieldList newField = createField(fieldName, fieldType);
-                                        if (!head) {
-                                            head = newField;
-                                            tail = newField;
+                                    if (fieldType) {
+                                        // Check for field redefinition (Error 15)
+                                        if (fieldExists(head, fieldName)) {
+                                            semanticError(15, def->lineNumber, "Redefined field");
+                                            freeType(fieldType);
                                         } else {
-                                            tail->tail = newField;
-                                            tail = newField;
+                                            FieldList newField = createField(fieldName, fieldType);
+                                            if (!head) {
+                                                head = newField;
+                                                tail = newField;
+                                            } else {
+                                                tail->tail = newField;
+                                                tail = newField;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
+                        // Move to next decList: skip comma if present
+                        if (dec && dec->nextSibling && dec->nextSibling->type == NODE_COMMA) {
+                            decListIter = dec->nextSibling->nextSibling;
+                        } else {
+                            decListIter = NULL;
+                        }
                     }
-                    dec = dec->nextSibling;
                 }
             }
         }
-
-        def = def->nextSibling;
+        // Next defList is the sibling of def
+        defList = def ? def->nextSibling : NULL;
     }
 
     return head;
@@ -501,6 +533,7 @@ static void analyzeExtDef(TreeNode* node) {
 
         TreeNode* compSt = funDec->nextSibling;
 
+        // ERROR type 2
         if (funcName && inFirstPass) {
             // First pass: insert function into symbol table
             Symbol* existing = lookupSymbol(funcName);
@@ -519,10 +552,10 @@ static void analyzeExtDef(TreeNode* node) {
                 sym->info.funcInfo.paramCount = 0;
                 sym->info.funcInfo.defined = true;
             }
-            // Also process function body definitions in first pass!
-            if (compSt && compSt->type == NODE_COMPST) {
-                analyzeCompSt(compSt);
-            }
+            // // Also process function body definitions in first pass!
+            // if (compSt && compSt->type == NODE_COMPST) {
+            //     analyzeCompSt(compSt);
+            // }
         } else if (funcName && !inFirstPass) {
             // Second pass: analyze function body statements
             if (compSt && compSt->type == NODE_COMPST) {
@@ -596,6 +629,8 @@ static void analyzeStmt(TreeNode* node) {
     TreeNode* child = node->firstChild;
     if (!child) return;
 
+    Log(__func__, "child type: %s", nodeTypeName(child->type));
+
     switch (child->type) {
         case NODE_RETURN: {
             // Return statement
@@ -643,6 +678,30 @@ static void analyzeStmt(TreeNode* node) {
     }
 }
 
+// Helper to traverse defList
+static void traverseDefList(TreeNode* defList) {
+    while (defList && defList->type == NODE_DEFLIST) {
+        TreeNode* def = defList->firstChild;
+        if (def && def->type == NODE_DEF) {
+            analyzeDef(def);
+        }
+        // Next defList is the sibling of def
+        defList = def ? def->nextSibling : NULL;
+    }
+}
+
+// Helper to traverse stmtList
+static void traverseStmtList(TreeNode* stmtList) {
+    while (stmtList && stmtList->type == NODE_STMTLIST) {
+        TreeNode* stmt = stmtList->firstChild;
+        if (stmt && stmt->type == NODE_STMT) {
+            analyzeStmt(stmt);
+        }
+        // Next stmtList is the sibling of stmt (due to how stmtList is built in syntax.y)
+        stmtList = stmt ? stmt->nextSibling : NULL;
+    }
+}
+
 // Analyze a CompSt node (compound statement)
 static void analyzeCompSt(TreeNode* node) {
     if (!node || node->type != NODE_COMPST) return;
@@ -651,37 +710,20 @@ static void analyzeCompSt(TreeNode* node) {
     // if (!inFirstPass) enterScope();
 
     TreeNode* child = node->firstChild; // should be LC
-    if (child) child = child->nextSibling; // DefList
+    if (child) child = child->nextSibling; // DefList (optional)
 
     // Analyze definitions (only in first pass)
-    if (inFirstPass) {
-        while (child && child->type == NODE_DEFLIST) {
-            TreeNode* def = child->firstChild;
-            while (def && def->type == NODE_DEF) {
-                analyzeDef(def);
-                def = def->nextSibling;
-            }
-            child = child->nextSibling; // StmtList
-        }
-    }
-
-    // Skip to StmtList for second pass
-    if (!inFirstPass) {
-        while (child && child->type == NODE_DEFLIST) {
-            child = child->nextSibling;
-        }
+    if (inFirstPass && child && child->type == NODE_DEFLIST) {
+        traverseDefList(child);
+        child = child->nextSibling; // move to StmtList
+    } else if (!inFirstPass && child && child->type == NODE_DEFLIST) {
+        // Skip DefList in second pass
+        child = child->nextSibling; // move to StmtList
     }
 
     // Analyze statements (only in second pass)
-    if (!inFirstPass) {
-        while (child && child->type == NODE_STMTLIST) {
-            TreeNode* stmt = child->firstChild;
-            while (stmt && stmt->type == NODE_STMT) {
-                analyzeStmt(stmt);
-                stmt = stmt->nextSibling;
-            }
-            child = child->nextSibling; // should be RC
-        }
+    if (!inFirstPass && child && child->type == NODE_STMTLIST) {
+        traverseStmtList(child);
     }
 
     // For Requirement 3.2 (nested scopes):
@@ -690,6 +732,10 @@ static void analyzeCompSt(TreeNode* node) {
 
 // Analyze an Expr node - returns the Type of the expression
 static Type analyzeExpr(TreeNode* node) {
+    Log(__func__, "entered, node: %p, node->type: %s, NODE_EXPR: %s",
+        (void*)node,
+        node ? nodeTypeName(node->type) : "NULL",
+        nodeTypeName(NODE_EXPR));
     if (!node || node->type != NODE_EXPR) return NULL;
     // When meet Exp, then the node and children node will use varible or function
     // search the symbol table to identify these variable or function exists or not
@@ -701,8 +747,120 @@ static Type analyzeExpr(TreeNode* node) {
     TreeNode* child = node->firstChild;
     if (!child) return NULL;
 
-    // Case 1: Just an ID - variable reference
+    TreeNode* sibling = child->nextSibling;
+
+    // First, handle cases that start with non-ID nodes and don't require looking ahead much
+
+    // Case A: Parentheses - ( expr )
+    if (child->type == NODE_LP) {
+        TreeNode* inner = child->nextSibling;
+        if (inner && inner->type == NODE_EXPR) {
+            return analyzeExpr(inner);
+        }
+        return NULL;
+    }
+
+    // Case B: Unary operations - !expr or -expr
+    if (child->type == NODE_NOT || child->type == NODE_MINUS) {
+        TreeNode* operand = child->nextSibling;
+        if (operand) analyzeExpr(operand);
+        return NULL;
+    }
+
+    // Case C: Integer literal
+    if (child->type == NODE_INT) {
+        return createBasicType(BASIC_INT);
+    }
+
+    // Case D: Float literal
+    if (child->type == NODE_FLOAT) {
+        return createBasicType(BASIC_FLOAT);
+    }
+
+    // Now handle all cases that start with an ID
     if (child->type == NODE_ID) {
+        // We need to determine what kind of ID expression this is
+        // Look at the siblings to decide
+
+        // Subcase 1: Function call - ID ( args )
+        // Check if any sibling is LP
+        TreeNode* curr = sibling;
+        int foundLP = 0;
+        while (curr) {
+            if (curr->type == NODE_LP) {
+                foundLP = 1;
+                break;
+            }
+            curr = curr->nextSibling;
+        }
+
+        if (foundLP) {
+            const char* funcName = child->name;
+            Symbol* sym = lookupSymbol(funcName);
+            if (!sym || sym->kind != SYMBOL_FUNCTION) {
+                // Error 2: Undefined function
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Undefined function \"%s\"", funcName);
+                semanticError(2, node->lineNumber, msg);
+            }
+            // TODO: Check arguments (Error 9)
+            return NULL;
+        }
+
+        // Subcase 2: Assignment - ID = expr
+        if (sibling && sibling->type == NODE_ASSIGNOP) {
+            // First check if variable is defined
+            const char* varName = child->name;
+            Symbol* sym = lookupSymbol(varName);
+            if (!sym) {
+                // Error 1: Undefined variable
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
+                semanticError(1, node->lineNumber, msg);
+            }
+            // Analyze right side
+            TreeNode* right = sibling->nextSibling;
+            if (right) analyzeExpr(right);
+            // TODO: Check type match (Error 5), check lvalue (Error 6)
+            return NULL;
+        }
+
+        // Subcase 3: Array indexing - ID [ expr ]
+        if (sibling && sibling->type == NODE_LB) {
+            // First check if variable is defined
+            const char* varName = child->name;
+            Symbol* sym = lookupSymbol(varName);
+            if (!sym) {
+                // Error 1: Undefined variable
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
+                semanticError(1, node->lineNumber, msg);
+            }
+            // Analyze index
+            TreeNode* index = sibling->nextSibling;
+            if (index && index->type == NODE_EXPR) {
+                analyzeExpr(index);
+            }
+            // TODO: Error 10 (non-array), Error 12 (non-int index)
+            return NULL;
+        }
+
+        // Subcase 4: Struct member access - ID . ID
+        if (sibling && sibling->type == NODE_DOT) {
+            // First check if variable is defined
+            const char* varName = child->name;
+            Symbol* sym = lookupSymbol(varName);
+            if (!sym) {
+                // Error 1: Undefined variable
+                char msg[64];
+                snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
+                semanticError(1, node->lineNumber, msg);
+            }
+            // TODO: Error 13 (non-struct), Error 14 (undefined field)
+            return NULL;
+        }
+
+        // Subcase 5: Just a variable reference
         const char* varName = child->name;
         Symbol* sym = lookupSymbol(varName);
         if (!sym) {
@@ -721,19 +879,18 @@ static Type analyzeExpr(TreeNode* node) {
         return NULL;
     }
 
-    // Case 2: Assignment - expr = expr
-    TreeNode* sibling = child->nextSibling;
+    // Now handle cases where the child is another expression (binary ops, etc.)
+
+    // Case E: Assignment - expr = expr (non-ID left side)
     if (sibling && sibling->type == NODE_ASSIGNOP) {
-        // Analyze left side (check lvalue later - Error 6)
         analyzeExpr(child);
-        // Analyze right side
         TreeNode* right = sibling->nextSibling;
         if (right) analyzeExpr(right);
-        // TODO: Check type match (Error 5)
+        // TODO: Check type match (Error 5), check lvalue (Error 6)
         return NULL;
     }
 
-    // Case 3: Binary operations - expr OP expr
+    // Case F: Binary operations - expr OP expr
     if (sibling && (sibling->type == NODE_PLUS || sibling->type == NODE_MINUS ||
                      sibling->type == NODE_STAR || sibling->type == NODE_DIV ||
                      sibling->type == NODE_RELOP || sibling->type == NODE_AND ||
@@ -745,62 +902,22 @@ static Type analyzeExpr(TreeNode* node) {
         return NULL;
     }
 
-    // Case 4: Unary operations - !expr or -expr
-    if (child->type == NODE_NOT || child->type == NODE_MINUS) {
-        TreeNode* operand = child->nextSibling;
-        if (operand) analyzeExpr(operand);
-        return NULL;
-    }
-
-    // Case 5: Parentheses - ( expr )
-    if (child->type == NODE_LP) {
-        TreeNode* inner = child->nextSibling;
-        if (inner && inner->type == NODE_EXPR) {
-            return analyzeExpr(inner);
-        }
-        return NULL;
-    }
-
-    // Case 6: Array indexing - expr [ expr ]
+    // Case G: Array indexing - expr [ expr ] (non-ID left side)
     if (sibling && sibling->type == NODE_LB) {
-        analyzeExpr(child); // Check array
+        analyzeExpr(child);
         TreeNode* index = sibling->nextSibling;
         if (index && index->type == NODE_EXPR) {
-            analyzeExpr(index); // Check index
+            analyzeExpr(index);
         }
         // TODO: Error 10 (non-array), Error 12 (non-int index)
         return NULL;
     }
 
-    // Case 7: Struct member access - expr . ID
+    // Case H: Struct member access - expr . ID (non-ID left side)
     if (sibling && sibling->type == NODE_DOT) {
-        analyzeExpr(child); // Check struct expression
+        analyzeExpr(child);
         // TODO: Error 13 (non-struct), Error 14 (undefined field)
         return NULL;
-    }
-
-    // Case 8: Function call - ID ( args )
-    if (child->type == NODE_ID && sibling && sibling->type == NODE_LP) {
-        const char* funcName = child->name;
-        Symbol* sym = lookupSymbol(funcName);
-        if (!sym || sym->kind != SYMBOL_FUNCTION) {
-            // Error 2: Undefined function
-            char msg[64];
-            snprintf(msg, sizeof(msg), "Undefined function \"%s\"", funcName);
-            semanticError(2, node->lineNumber, msg);
-        }
-        // TODO: Check arguments (Error 9)
-        return NULL;
-    }
-
-    // Case 9: Integer literal
-    if (child->type == NODE_INT) {
-        return createBasicType(BASIC_INT);
-    }
-
-    // Case 10: Float literal
-    if (child->type == NODE_FLOAT) {
-        return createBasicType(BASIC_FLOAT);
     }
 
     // Recursively analyze all children for other cases
@@ -821,11 +938,11 @@ static Type analyzeExpr(TreeNode* node) {
 static void traverseExtDefList(TreeNode* extDefList) {
     while (extDefList && extDefList->type == NODE_EXTDEF_LIST) {
         TreeNode* extDef = extDefList->firstChild;
-        while (extDef && extDef->type == NODE_EXTDEF) {
+        if (extDef && extDef->type == NODE_EXTDEF) {
             analyzeExtDef(extDef);
-            extDef = extDef->nextSibling;
         }
-        extDefList = extDefList->nextSibling;
+        // Next extDefList is the sibling of extDef
+        extDefList = extDef ? extDef->nextSibling : NULL;
     }
 }
 

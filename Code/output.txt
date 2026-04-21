@@ -1,60 +1,49 @@
-./parser ../Test/test4.cmm
 Program (1)
   ExtDefList (1)
     ExtDef (1)
       Specifier (1)
-        StructSpecifier (1)
-          STRUCT
-          OptTag (1)
-            ID: Complex
-          LC
-          DefList (3)
-            Def (3)
-              Specifier (3)
-                TYPE: float
-              DecList (3)
-                Dec (3)
-                  VarDec (3)
-                    ID: real
-                COMMA
-                Dec (3)
-                  VarDec (3)
-                    ID: image
-              SEMI
-          RC
-      SEMI
-    ExtDefList (1)
-      ExtDef (1)
-        Specifier (5)
+        TYPE: int
+      FunDec (1)
+        ID: foo
+        LP
+        RP
+      CompSt (2)
+        LC
+        StmtList (3)
+          Stmt (3)
+            RETURN
+            Exp (3)
+              INT: 0
+            SEMI
+        RC
+    ExtDefList (6)
+      ExtDef (6)
+        Specifier (6)
           TYPE: int
-        FunDec (5)
+        FunDec (6)
           ID: main
           LP
           RP
-        CompSt (2)
+        CompSt (7)
           LC
-          DefList (7)
-            Def (7)
-              Specifier (7)
-                StructSpecifier (7)
-                  STRUCT
-                  Tag (7)
-                    ID: x
-              DecList (7)
-                Dec (7)
-                  VarDec (7)
-                    ID: x
-              SEMI
           StmtList (8)
             Stmt (8)
               Exp (8)
-                Exp (8)
-                  Exp (8)
-                    ID: y
-                  DOT
-                  ID: image
-                ASSIGNOP
-                Exp (8)
-                  FLOAT: 3.5
+                ID: foo
+                LP
+                RP
               SEMI
+            StmtList (9)
+              Stmt (9)
+                Exp (9)
+                  ID: bar
+                  LP
+                  RP
+                SEMI
+              StmtList (10)
+                Stmt (10)
+                  RETURN
+                  Exp (10)
+                    INT: 0
+                  SEMI
           RC

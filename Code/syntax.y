@@ -810,12 +810,20 @@ expr:
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
       addChild($$, $1);
+      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
+      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
+      addChild($$, lpNode);
       addChild($$, $3);
+      addChild($$, rpNode);
     }
     | T_ID T_LP T_RP
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
       addChild($$, $1);
+      TreeNode* lpNode = createTreeNode(NODE_LP, "LP", yylineno);
+      TreeNode* rpNode = createTreeNode(NODE_RP, "RP", yylineno);
+      addChild($$, lpNode);
+      addChild($$, rpNode);
     }
     | expr T_LB expr T_RB
     {

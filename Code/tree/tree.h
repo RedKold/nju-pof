@@ -41,6 +41,9 @@ void printTree(TreeNode* root, int level);
 
 
 // 释放语法树内存的函数
-void freeTree(TreeNode* root); 
+void freeTree(TreeNode* root);
+
+// Get node type name for debugging
+const char* nodeTypeName(NodeType type);
 
 #endif

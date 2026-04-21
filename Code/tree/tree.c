@@ -174,5 +174,62 @@ void freeTree(TreeNode* root) {
     free(root);
 }
 
+// Get node type name for debugging
+const char* nodeTypeName(NodeType type) {
+    switch (type) {
+        case NODE_PROGRAM: return "NODE_PROGRAM";
+        case NODE_EXTDEF: return "NODE_EXTDEF";
+        case NODE_EXTDEF_LIST: return "NODE_EXTDEF_LIST";
+        case NODE_SPECIFIER: return "NODE_SPECIFIER";
+        case NODE_STRUCTSPECIFIER: return "NODE_STRUCTSPECIFIER";
+        case NODE_OPTTAG: return "NODE_OPTTAG";
+        case NODE_TAG: return "NODE_TAG";
+        case NODE_EXTDECLIST: return "NODE_EXTDECLIST";
+        case NODE_VARDEC: return "NODE_VARDEC";
+        case NODE_FUNDEC: return "NODE_FUNDEC";
+        case NODE_COMPST: return "NODE_COMPST";
+        case NODE_STMTLIST: return "NODE_STMTLIST";
+        case NODE_STMT: return "NODE_STMT";
+        case NODE_DEFLIST: return "NODE_DEFLIST";
+        case NODE_DEF: return "NODE_DEF";
+        case NODE_DECLIST: return "NODE_DECLIST";
+        case NODE_DEC: return "NODE_DEC";
+        case NODE_EXPR: return "NODE_EXPR";
+        case NODE_ARGS: return "NODE_ARGS";
+        case NODE_EXPRLIST: return "NODE_EXPRLIST";
+        case NODE_PARAMS: return "NODE_PARAMS";
+        case NODE_PARAMDECLIST: return "NODE_PARAMDECLIST";
+        case NODE_PARAMDEC: return "NODE_PARAMDEC";
+        case NODE_TYPE: return "NODE_TYPE";
+        case NODE_STRUCT: return "NODE_STRUCT";
+        case NODE_INT: return "NODE_INT";
+        case NODE_FLOAT: return "NODE_FLOAT";
+        case NODE_ID: return "NODE_ID";
+        case NODE_ASSIGNOP: return "NODE_ASSIGNOP";
+        case NODE_RELOP: return "NODE_RELOP";
+        case NODE_PLUS: return "NODE_PLUS";
+        case NODE_MINUS: return "NODE_MINUS";
+        case NODE_STAR: return "NODE_STAR";
+        case NODE_DIV: return "NODE_DIV";
+        case NODE_AND: return "NODE_AND";
+        case NODE_OR: return "NODE_OR";
+        case NODE_NOT: return "NODE_NOT";
+        case NODE_SEMI: return "NODE_SEMI";
+        case NODE_COMMA: return "NODE_COMMA";
+        case NODE_DOT: return "NODE_DOT";
+        case NODE_LP: return "NODE_LP";
+        case NODE_RP: return "NODE_RP";
+        case NODE_LB: return "NODE_LB";
+        case NODE_RB: return "NODE_RB";
+        case NODE_LC: return "NODE_LC";
+        case NODE_RC: return "NODE_RC";
+        case NODE_RETURN: return "NODE_RETURN";
+        case NODE_IF: return "NODE_IF";
+        case NODE_ELSE: return "NODE_ELSE";
+        case NODE_WHILE: return "NODE_WHILE";
+        default: return "UNKNOWN_NODE_TYPE";
+    }
+}
+
 
 
