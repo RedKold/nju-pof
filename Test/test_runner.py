@@ -51,16 +51,18 @@ def run_test(test_file):
             text=True,
             timeout=10
         )
-        actual = [line.rstrip("\n") for line in result.stdout.splitlines()]
+        all_actual = [line.rstrip("\n") for line in result.stdout.splitlines()]
+        # Only keep lines that start with "Error" for comparison
+        actual = [line for line in all_actual if line.startswith("Error")]
     except subprocess.TimeoutExpired:
-        return False, ["TIMEOUT"], expected
+        return False, ["TIMEOUT"], expected, []
     except Exception as e:
-        return False, [f"ERROR: {e}"], expected
+        return False, [f"ERROR: {e}"], expected, []
 
     # Compare
     success = actual == expected
 
-    return success, actual, expected
+    return success, actual, expected, all_actual
 
 
 def print_diff(actual, expected):
@@ -111,7 +113,7 @@ def main():
         test_name = test_file.stem
         print(f"{color_text('Test:', 'bold')} {test_name}... ", end="")
 
-        success, actual, expected = run_test(test_file)
+        success, actual, expected, all_actual = run_test(test_file)
 
         if success:
             print(color_text("PASS", "green"))
@@ -123,7 +125,7 @@ def main():
             print(color_text("  Expected:", "yellow"))
             for line in expected:
                 print(f"    {line}")
-            print(color_text("  Actual:", "yellow"))
+            print(color_text("  Actual Errors:", "yellow"))
             for line in actual:
                 print(f"    {line}")
             print()

@@ -1,0 +1,6 @@
+int main()
+{
+    int i;
+    i.field = 5;
+    return 0;
+}

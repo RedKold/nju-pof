@@ -882,8 +882,11 @@ expr:
 // 实参列表
 args: expr T_COMMA args
     {
-      $$ = $1;
-      $1->nextSibling = $3;
+      $$ = createTreeNode(NODE_ARGS, "Args", yylineno);
+      addChild($$, $1);
+      TreeNode* commaNode = createTreeNode(NODE_COMMA, "COMMA", yylineno);
+      addChild($$, commaNode);
+      addChild($$,$3);
     }
     | expr
     { $$ = $1; }

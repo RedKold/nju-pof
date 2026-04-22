@@ -686,8 +686,8 @@ static const yytype_int16 yyrline[] =
      497,   504,   506,   515,   527,   543,   558,   577,   583,   588,
      599,   604,   615,   620,   652,   685,   693,   701,   709,   717,
      725,   733,   741,   743,   750,   758,   803,   809,   819,   828,
-     838,   846,   851,   858,   865,   869,   883,   888,   890,   896,
-     901
+     838,   846,   851,   858,   865,   869,   883,   891,   893,   899,
+     904
 };
 #endif
 
@@ -2637,48 +2637,51 @@ yyreduce:
   case 76:
 #line 884 "./syntax.y"
     {
-      (yyval.node) = (yyvsp[-2].node);
-      (yyvsp[-2].node)->nextSibling = (yyvsp[0].node);
+      (yyval.node) = createTreeNode(NODE_ARGS, "Args", yylineno);
+      addChild((yyval.node), (yyvsp[-2].node));
+      TreeNode* commaNode = createTreeNode(NODE_COMMA, "COMMA", yylineno);
+      addChild((yyval.node), commaNode);
+      addChild((yyval.node),(yyvsp[0].node));
     }
-#line 2644 "./syntax.tab.c"
+#line 2647 "./syntax.tab.c"
     break;
 
   case 77:
-#line 889 "./syntax.y"
+#line 892 "./syntax.y"
     { (yyval.node) = (yyvsp[0].node); }
-#line 2650 "./syntax.tab.c"
+#line 2653 "./syntax.tab.c"
     break;
 
   case 78:
-#line 891 "./syntax.y"
+#line 894 "./syntax.y"
     {
       printf("Error type B at Line %d: Trailing comma in function call arguments.\n", yylineno);
       has_error = 1;
       (yyval.node) = (yyvsp[-1].node);
     }
-#line 2660 "./syntax.tab.c"
+#line 2663 "./syntax.tab.c"
     break;
 
   case 79:
-#line 897 "./syntax.y"
+#line 900 "./syntax.y"
     {
       has_error = 1;
       (yyval.node) = (yyvsp[0].node);
     }
-#line 2669 "./syntax.tab.c"
+#line 2672 "./syntax.tab.c"
     break;
 
   case 80:
-#line 902 "./syntax.y"
+#line 905 "./syntax.y"
     {
       has_error = 1;
       (yyval.node) = NULL;
     }
-#line 2678 "./syntax.tab.c"
+#line 2681 "./syntax.tab.c"
     break;
 
 
-#line 2682 "./syntax.tab.c"
+#line 2685 "./syntax.tab.c"
 
       default: break;
     }
@@ -2916,7 +2919,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 908 "./syntax.y"
+#line 911 "./syntax.y"
 
 // Declare the AST root for use in main.c
 TreeNode* ast_root;
