@@ -889,7 +889,10 @@ args: expr T_COMMA args
       addChild($$,$3);
     }
     | expr
-    { $$ = $1; }
+    { 
+      $$ = createTreeNode(NODE_ARGS, "Args", yylineno);
+      addChild($$, $1);
+    }
     | expr T_COMMA
     {
       printf("Error type B at Line %d: Trailing comma in function call arguments.\n", yylineno);

@@ -32,16 +32,23 @@ syntax-c: $(YFILE)
 -include $(patsubst %.o, %.d, $(OBJS))
 
 # 定义的一些伪目标
-.PHONY: clean test semantic-test
+.PHONY: clean test semantic-test ss-test
 test: parser
-	@echo "Running all tests..."
-	@cd .. && ./test_kit.sh
+	@echo "Running simplized semantic analysis test..."
+	@python3 ../Test/test_runner.py | grep "Test"
 
 test-single: parser
 	@if [ "$(TEST)" = "" ]; then \
 		echo "Usage: make test-single TEST=test_name (e.g., make test-single TEST=A-1)"; \
 	else \
 		./parser ../Resources/Tests/inputs/$(TEST).cmm; \
+	fi
+
+ss-test: parser
+	@if [ "$(N)" = "" ]; then \
+		echo "Usage: make ss-test N=error_number (e.g., make ss-test N=02)"; \
+	else \
+		./parser ../Test/semantic_tests/error$(N)*.cmm; \
 	fi
 
 # Semantic analysis tests
@@ -61,5 +68,3 @@ submit:
 	cd .. && zip -r 231275036.zip . -x "231275036.zip" -x "*.git*" -x "*~"
 	echo "update zip!"
 
-gdb:	gdb parser
-	@echo "Using gdb to debug..."

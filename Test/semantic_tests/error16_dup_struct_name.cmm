@@ -1,14 +1,13 @@
-struct Point {
+struct Point
+{
     int x;
-    int y;
 };
 
-struct Point {
-    float a;
-    float b;
+struct Point 
+{
+    int y;
 };
 
 int main()
 {
-    return 0;
 }

@@ -686,8 +686,8 @@ static const yytype_int16 yyrline[] =
      497,   504,   506,   515,   527,   543,   558,   577,   583,   588,
      599,   604,   615,   620,   652,   685,   693,   701,   709,   717,
      725,   733,   741,   743,   750,   758,   803,   809,   819,   828,
-     838,   846,   851,   858,   865,   869,   883,   891,   893,   899,
-     904
+     838,   846,   851,   858,   865,   869,   883,   891,   896,   902,
+     907
 };
 #endif
 
@@ -2648,40 +2648,43 @@ yyreduce:
 
   case 77:
 #line 892 "./syntax.y"
-    { (yyval.node) = (yyvsp[0].node); }
-#line 2653 "./syntax.tab.c"
+    { 
+      (yyval.node) = createTreeNode(NODE_ARGS, "Args", yylineno);
+      addChild((yyval.node), (yyvsp[0].node));
+    }
+#line 2656 "./syntax.tab.c"
     break;
 
   case 78:
-#line 894 "./syntax.y"
+#line 897 "./syntax.y"
     {
       printf("Error type B at Line %d: Trailing comma in function call arguments.\n", yylineno);
       has_error = 1;
       (yyval.node) = (yyvsp[-1].node);
     }
-#line 2663 "./syntax.tab.c"
+#line 2666 "./syntax.tab.c"
     break;
 
   case 79:
-#line 900 "./syntax.y"
+#line 903 "./syntax.y"
     {
       has_error = 1;
       (yyval.node) = (yyvsp[0].node);
     }
-#line 2672 "./syntax.tab.c"
+#line 2675 "./syntax.tab.c"
     break;
 
   case 80:
-#line 905 "./syntax.y"
+#line 908 "./syntax.y"
     {
       has_error = 1;
       (yyval.node) = NULL;
     }
-#line 2681 "./syntax.tab.c"
+#line 2684 "./syntax.tab.c"
     break;
 
 
-#line 2685 "./syntax.tab.c"
+#line 2688 "./syntax.tab.c"
 
       default: break;
     }
@@ -2919,7 +2922,7 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 911 "./syntax.y"
+#line 914 "./syntax.y"
 
 // Declare the AST root for use in main.c
 TreeNode* ast_root;

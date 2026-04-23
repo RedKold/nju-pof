@@ -13,7 +13,8 @@ typedef struct FieldList_* FieldList;
 typedef enum {
     TYPE_BASIC,
     TYPE_ARRAY,
-    TYPE_STRUCTURE
+    TYPE_STRUCTURE,
+    TYPE_ERROR
 } TypeKind;
 
 // Basic types
@@ -88,5 +89,8 @@ void semanticError(int errorType, int lineNumber, const char* description);
 
 // Get total number of semantic errors
 int getSemanticErrorCount();
+
+// Print the symbol table content (for debugging)
+void printSymbolTable();
 
 #endif // SEMANTICS_H

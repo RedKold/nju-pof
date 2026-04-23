@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include<assert.h>
+#include <assert.h>
 
 #define DEBUG
 
@@ -20,6 +20,8 @@ static int semanticErrorCount = 0;
 static int currentScopeDepth = 0; // for Requirement 3.2 (nested scopes)
 static bool inFirstPass =
     false; // true = collecting declarations, false = checking usage
+static Symbol *currentFunction =
+    NULL; // track current function for return type checking
 
 // ==================== Forward Declarations ====================
 
@@ -36,6 +38,7 @@ static void traverseExtDefList(TreeNode *extDefList);
 static void freeType(Type type);
 static void freeFieldList(FieldList field);
 static void processFunctionParams(TreeNode *funDecNode, Symbol *funcSym);
+static Type copyType(Type type);
 
 // ==================== Hash Function (P.J. Weinberger) ====================
 
@@ -107,7 +110,7 @@ static Symbol *lookupSymbol(const char *name) {
   }
 
   if (found) {
-    Log(__func__, "Found");
+    Log(__func__, "Name %s founded", name);
   } else {
     Log(__func__, "Not found");
   }
@@ -243,6 +246,44 @@ static void freeType(Type type) {
   free(type);
 }
 
+// Check LValue
+/**
+ * 检查一个表达式节点是否为合法的左值 (L-value)
+ * 合法情况：
+ * 1. Exp -> ID
+ * 2. Exp -> Exp LB Exp RB  (数组访问)
+ * 3. Exp -> Exp DOT ID     (结构体成员访问)
+ */
+static bool isLValue(TreeNode *expNode) {
+  if (!expNode || expNode->type != NODE_EXPR)
+    return false;
+
+  TreeNode *child = expNode->firstChild;
+  if (!child)
+    return false;
+
+  // 情况 1: Exp -> ID
+  if (child->type == NODE_ID && child->nextSibling == NULL) {
+    return true;
+  }
+
+  // 情况 2 & 3: 第一个子节点也是 Exp
+  if (child->type == NODE_EXPR) {
+    TreeNode *op = child->nextSibling;
+    if (op) {
+      // Exp -> Exp LB Exp RB
+      if (op->type == NODE_LB)
+        return true;
+      // Exp -> Exp DOT ID
+      if (op->type == NODE_DOT)
+        return true;
+    }
+  }
+
+  // 其他情况（如 NODE_INT, NODE_FLOAT, 或二元运算 Exp + Exp）均非法
+  return false;
+}
+
 // ==================== Error Reporting ====================
 
 void semanticError(int errorType, int lineNumber, const char *description) {
@@ -320,7 +361,7 @@ static FieldList analyzeDefListForFields(TreeNode *defListNode,
 
                   if (fieldType) {
                     // Check for field redefinition (Error 15)
-                    if (fieldExists(head, fieldName)) {
+                    if (inFirstPass && fieldExists(head, fieldName)) {
                       semanticError(15, def->lineNumber, "Redefined field");
                       freeType(fieldType);
                     } else {
@@ -369,9 +410,13 @@ static Type analyzeSpecifier(TreeNode *node) {
   if (child->type == NODE_TYPE) {
     // Basic type: int or float
     if (strcmp(child->name, "int") == 0) {
-      return createBasicType(BASIC_INT);
+      Type t = createBasicType(BASIC_INT);
+      Log(__func__, "Returning basic int type %p, kind=%d", (void*)t, t->kind);
+      return t;
     } else if (strcmp(child->name, "float") == 0) {
-      return createBasicType(BASIC_FLOAT);
+      Type t = createBasicType(BASIC_FLOAT);
+      Log(__func__, "Returning basic float type %p, kind=%d", (void*)t, t->kind);
+      return t;
     }
   } else if (child->type == NODE_STRUCTSPECIFIER) {
     // Struct specifier: two cases
@@ -384,57 +429,52 @@ static Type analyzeSpecifier(TreeNode *node) {
 
     TreeNode *tagOrOptTag = structChild->nextSibling;
 
+    Log(__func__, "--------------CHECKING TAGS------------");
+
     if (tagOrOptTag) {
       // Check if this is a definition (has LC) or just a reference
       TreeNode *lcNode = tagOrOptTag->nextSibling;
 
       if (lcNode && lcNode->type == NODE_LC) {
-        // Case 1: Struct definition - struct Tag { DefList }
+        Log(__func__, "--------------CASE 1-----------");
+        // Case 1: Struct definition - struct Tag { DefList } in that way this
+        // is a OptTag
         const char *structName = NULL;
         if (tagOrOptTag->type == NODE_OPTTAG) {
           structName = getIdentifierName(tagOrOptTag);
         }
 
-        if (structName) {
+        // Parse the defList to get fields (do this even in second pass to
+        // return the type)
+        TreeNode *defList = lcNode->nextSibling;
+        FieldList fields = NULL;
+        if (defList && defList->type == NODE_DEFLIST) {
+          fields = analyzeDefListForFields(defList, child->lineNumber);
+        }
+
+        // Create the struct type
+        Type structType = createStructType(fields);
+
+        if (structName &&
+            inFirstPass) { // Only modify symbol table in first pass!
           // Check if struct name is already defined (Error 16)
           Symbol *existing = lookupSymbol(structName);
           if (existing) {
             semanticError(16, child->lineNumber, "Redefined structure");
-            // Continue processing but don't reinsert
           } else {
             // Insert into symbol table first (so struct can reference itself if
             // needed)
             Symbol *structSym = insertSymbol(structName, SYMBOL_STRUCT);
-            // We'll fill in the type after parsing fields
-            structSym->info.structType = NULL;
+            structSym->info.structType = copyType(structType); // Store a copy
           }
-
-          // Parse the defList to get fields
-          TreeNode *defList = lcNode->nextSibling;
-          FieldList fields = NULL;
-          if (defList && defList->type == NODE_DEFLIST) {
-            fields = analyzeDefListForFields(defList, child->lineNumber);
-          }
-
-          // Create the struct type
-          Type structType = createStructType(fields);
-
-          // Update the symbol table entry
-          if (existing == NULL) {
-            Symbol *structSym = lookupSymbol(structName);
-            if (structSym) {
-              structSym->info.structType = structType;
-            }
-          }
-
-          // Return a copy of the type (or just return it - manage memory
-          // carefully!) For simplicity, we'll return the type, but note that
-          // symbol table also has a reference You might want to implement
-          // reference counting or be careful with freeType
-          return structType;
         }
+
+        // Return the struct type
+        Log(__func__, "Returning struct definition type %p, kind=%d", (void*)structType, structType->kind);
+        return structType;
       } else {
         // Case 2: Struct reference - struct Tag
+        Log(__func__, "--------------CASE 2-----------");
         const char *structName = NULL;
         if (tagOrOptTag->type == NODE_TAG) {
           structName = getIdentifierName(tagOrOptTag);
@@ -443,6 +483,7 @@ static Type analyzeSpecifier(TreeNode *node) {
         }
 
         if (structName) {
+          Log(__func__, "struct Name is %s", structName);
           // Look up the struct in symbol table
           Symbol *structSym = lookupSymbol(structName);
           if (!structSym || structSym->kind != SYMBOL_STRUCT) {
@@ -457,6 +498,7 @@ static Type analyzeSpecifier(TreeNode *node) {
             return NULL;
           }
 
+          Log(__func__, "Returning struct reference type %p, kind=%d", (void*)structSym->info.structType, structSym->info.structType->kind);
           // Return the struct type
           // Note: you might want to make a copy here, but for simplicity we
           // return the reference
@@ -471,7 +513,10 @@ static Type analyzeSpecifier(TreeNode *node) {
 
 // Process a VarDec node and insert into symbol table
 static void processVarDec(TreeNode *varDecNode, Type baseType, int lineNo) {
-  // Log(__func__, "dealing with varDec\n");
+  Log(__func__, "dealing with varDec, baseType=%p", (void*)baseType);
+  if (baseType) {
+    Log(__func__, "baseType kind=%d", baseType->kind);
+  }
   if (!varDecNode || varDecNode->type != NODE_VARDEC)
     return;
 
@@ -482,6 +527,7 @@ static void processVarDec(TreeNode *varDecNode, Type baseType, int lineNo) {
 
   // Build the complete type
   Type varType = analyzeVarDec(varDecNode, baseType, false);
+  Log(__func__, "varName=%s, varType=%p, varType kind=%d", varName, (void*)varType, varType ? varType->kind : -1);
   if (!varType)
     return;
 
@@ -690,14 +736,17 @@ static void analyzeExtDef(TreeNode *node) {
       Symbol *existing = lookupSymbol(funcName);
       if (existing) {
         semanticError(4, node->lineNumber, "Redefined function");
+
         // Free the type since we're not using it
         if (type)
           freeType(type);
+        type = NULL;
+
       } else {
         Symbol *sym = insertSymbol(funcName, SYMBOL_FUNCTION);
-        // Store the return type directly (no copy needed)
+        // use copy
         if (type) {
-          sym->info.funcInfo.returnType = type;
+          sym->info.funcInfo.returnType = copyType(type);
         } else {
           sym->info.funcInfo.returnType = NULL;
         }
@@ -716,7 +765,10 @@ static void analyzeExtDef(TreeNode *node) {
     } else if (funcName && !inFirstPass) {
       // Second pass: analyze function body statements
       if (compSt && compSt->type == NODE_COMPST) {
+        // Set current function for return type checking
+        currentFunction = lookupSymbol(funcName);
         analyzeCompSt(compSt);
+        currentFunction = NULL;
       }
       // Free the type since we didn't store it anywhere in the second pass
       if (type)
@@ -807,10 +859,33 @@ static void analyzeStmt(TreeNode *node) {
   case NODE_RETURN: {
     // Return statement
     TreeNode *expr = child->nextSibling;
+    Type return_val_type = NULL;
     if (expr && expr->type == NODE_EXPR) {
-      analyzeExpr(expr);
+      return_val_type = analyzeExpr(expr);
     }
-    // TODO: Error 8 - check return type matches function
+
+    // Error 8 - check return type matches function
+    if (currentFunction && currentFunction->kind == SYMBOL_FUNCTION) {
+      Type expected_type = currentFunction->info.funcInfo.returnType;
+
+      // Both types exist but don't match
+
+      // char msg[64] = "Type mismatched for return";
+
+      if (expected_type && return_val_type &&
+          !typeEqual(expected_type, return_val_type)) {
+        semanticError(8, node->lineNumber, "Type mismatched for return");
+      }
+      // Function returns something but we return nothing
+      else if (expected_type && !return_val_type) {
+        semanticError(8, node->lineNumber, "Type mismatched for return");
+      }
+      // Function returns nothing but we return something
+      else if (!expected_type && return_val_type) {
+        semanticError(8, node->lineNumber, "Type mismatched for return");
+      }
+    }
+
     break;
   }
   case NODE_IF: {
@@ -931,8 +1006,6 @@ static Type analyzeExpr(TreeNode *node) {
   //   printf("Sibling's type: %s\n", nodeTypeName(sibling->type));
   // }
 
-
-
   // First, handle cases that start with non-ID nodes and don't require looking
   // ahead much
 
@@ -957,7 +1030,7 @@ static Type analyzeExpr(TreeNode *node) {
 
   // Case C: Integer literal
   if (child->type == NODE_INT) {
-    Log(__func__, "CASE C:\n");
+    // Log(__func__, "CASE C:\n");
     return createBasicType(BASIC_INT);
   }
 
@@ -990,69 +1063,98 @@ static Type analyzeExpr(TreeNode *node) {
     if (foundLP) {
       const char *funcName = child->name;
       Symbol *sym = lookupSymbol(funcName);
-      if (!sym || sym->kind != SYMBOL_FUNCTION) {
+      if (!sym) {
         // Error 2: Undefined function
         char msg[64];
         snprintf(msg, sizeof(msg), "Undefined function \"%s\"", funcName);
         semanticError(2, node->lineNumber, msg);
-      }
-      // TODO: Check arguments (Error 9)
-      return NULL;
-    }
-
-    // Subcase 2: Assignment - ID = expr
-    if (sibling && sibling->type == NODE_ASSIGNOP) {
-      // First check if variable is defined
-      const char *varName = child->name;
-      Symbol *sym = lookupSymbol(varName);
-      if (!sym) {
-        // Error 1: Undefined variable
-        char msg[64];
-        snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
-        semanticError(1, node->lineNumber, msg);
-      }
-      // Analyze right side
-      TreeNode *right = sibling->nextSibling;
-      if (right)
-        analyzeExpr(right);
-
-      // TODO: Check type match (Error 5), check lvalue (Error 6)
-
-
-      Symbol *left_symbol = lookupSymbol(node->name);
-      Symbol *right_symbol = lookupSymbol(right->name);
-
-
-      Log(__func__, "left_symbol: %d", left_symbol->info.variableType);
-      Log(__func__, "right_symbol: %d", right_symbol->info.variableType);
-
-
-      if (left_symbol->info.variableType != right_symbol->info.variableType) {
-        {
-          char msg[64];
-          snprintf(msg, sizeof(msg), "Type mismatch in assignment");
-          semanticError(5, node->lineNumber, msg);
-        }
         return NULL;
       }
+      if (sym->kind != SYMBOL_FUNCTION) {
+        char msg[64];
+        snprintf(msg, sizeof(msg), "\"%s\" is not a function", sym->name);
+        semanticError(11, node->lineNumber, msg);
+        return NULL;
+      }
+
+      Log(__func__, "Checking arguments...");
+
+      // Now check arguments (Error 9)
+      TreeNode *argsNode = curr->nextSibling; // should be NODE_ARGS or RP
+      int argCount = 0;
+      FieldList paramIter = sym->info.funcInfo.params;
+
+      // Traverse args list
+      TreeNode *argList = argsNode;
+      while (argList && argList->type == NODE_ARGS) {
+        TreeNode *argExpr = argList->firstChild;
+        if (argExpr && argExpr->type == NODE_EXPR) {
+          Type argType = analyzeExpr(argExpr);
+
+          // Check type if we have a parameter
+          if (paramIter) {
+            if (!typeEqual(argType, paramIter->type)) {
+              semanticError(9, node->lineNumber, "Function argument mismatch");
+            }
+            paramIter = paramIter->tail;
+          }
+
+          argCount++;
+        }
+
+        // Move to next arg: if there's a COMMA, skip it and get next ARGS
+        if (argExpr && argExpr->nextSibling &&
+            argExpr->nextSibling->type == NODE_COMMA) {
+          argList = argExpr->nextSibling->nextSibling;
+        } else {
+          argList = NULL;
+        }
+      }
+
+      // Check parameter count matches
+      if (argCount != sym->info.funcInfo.paramCount) {
+        semanticError(9, node->lineNumber, "Function argument mismatch");
+      }
+
+      return sym->info.funcInfo.returnType;
     }
+
     // Subcase 3: Array indexing - ID [ expr ]
     if (sibling && sibling->type == NODE_LB) {
       // First check if variable is defined
       const char *varName = child->name;
       Symbol *sym = lookupSymbol(varName);
+      Type arrayType = NULL;
       if (!sym) {
         // Error 1: Undefined variable
         char msg[64];
         snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
         semanticError(1, node->lineNumber, msg);
+      } else if (sym->kind == SYMBOL_VARIABLE) {
+        arrayType = sym->info.variableType;
+        // Error 10: Check if it's an array
+        if (!arrayType || arrayType->kind != TYPE_ARRAY) {
+          char msg[64];
+          snprintf(msg, sizeof(msg), "\"%s\" is not an array", sym->name);
+          semanticError(10, node->lineNumber, msg);
+        }
       }
       // Analyze index
       TreeNode *index = sibling->nextSibling;
+      Type indexType = NULL;
       if (index && index->type == NODE_EXPR) {
-        analyzeExpr(index);
+        indexType = analyzeExpr(index);
       }
-      // TODO: Error 10 (non-array), Error 12 (non-int index)
+      // Error 12: Check if index is integer
+      if (indexType &&
+          (indexType->kind != TYPE_BASIC || indexType->u.basic != BASIC_INT)) {
+        semanticError(12, node->lineNumber, "Non-integer used as array index");
+      }
+
+      // Return the element type if we have an array
+      if (arrayType && arrayType->kind == TYPE_ARRAY) {
+        return arrayType->u.array.elem;
+      }
       return NULL;
     }
 
@@ -1061,13 +1163,48 @@ static Type analyzeExpr(TreeNode *node) {
       // First check if variable is defined
       const char *varName = child->name;
       Symbol *sym = lookupSymbol(varName);
+      Type structType = NULL;
       if (!sym) {
         // Error 1: Undefined variable
         char msg[64];
         snprintf(msg, sizeof(msg), "Undefined variable \"%s\"", varName);
         semanticError(1, node->lineNumber, msg);
+      } else if (sym->kind == SYMBOL_VARIABLE) {
+        structType = sym->info.variableType;
+        // Debug print
+        if (structType) {
+          Log(__func__, "Variable %s has type kind %d", varName, structType->kind);
+        } else {
+          Log(__func__, "Variable %s has NULL type", varName);
+        }
+        // Error 13: Check if it's a struct
+        if (!structType || structType->kind != TYPE_STRUCTURE) {
+          semanticError(13, node->lineNumber, "Dot operator on non-struct");
+        }
       }
-      // TODO: Error 13 (non-struct), Error 14 (undefined field)
+
+      // Get field name
+      TreeNode *idNode = sibling->nextSibling;
+      if (idNode && idNode->type == NODE_ID && structType &&
+          structType->kind == TYPE_STRUCTURE) {
+        const char *fieldName = idNode->name;
+        // Error 14: Check if field exists
+        FieldList fieldIter = structType->u.structure;
+        bool found = false;
+        while (fieldIter) {
+          if (strcmp(fieldIter->name, fieldName) == 0) {
+            found = true;
+            return fieldIter->type; // return field type
+          }
+          fieldIter = fieldIter->tail;
+        }
+        if (!found) {
+          char msg[64];
+          snprintf(msg, sizeof(msg), "Accessing undefined struct field \"%s\"",
+                   fieldName);
+          semanticError(14, node->lineNumber, msg);
+        }
+      }
       return NULL;
     }
 
@@ -1102,21 +1239,34 @@ static Type analyzeExpr(TreeNode *node) {
 
     TreeNode *left = child;
 
-    Symbol* left_symbol = lookupSymbol(left->firstChild->name);
+    // Symbol* left_symbol = lookupSymbol(left->firstChild->name);
+    Type left_type = analyzeExpr(left);
+    Type right_type = analyzeExpr(right);
 
     assert(right);
-    Symbol* right_symbol = lookupSymbol(right->firstChild->name);
-    assert(right_symbol);
+    // Symbol* right_symbol = lookupSymbol(right->firstChild->name);
+    // assert(right_symbol);
 
-    if (left_symbol->info.variableType != right_symbol->info.variableType)
-    {
+    if (!typeEqual(left_type, right_type)) {
       Log(__func__, "AssignOp between different type");
       char buf[256];
-      sprintf(buf, "Type mismatch in assignment.");
-      semanticError(5, node->lineNumber, buf);
+      if (left_type && right_type) {
+        sprintf(buf, "Type mismatch in assignment");
+        semanticError(5, node->lineNumber, buf);
+      }
     }
 
-    return NULL;
+    // check if a right-value be assigned
+    // Need to analyse the left.
+
+    if (!isLValue(left)) {
+      char msg[64];
+      snprintf(msg, sizeof(msg),
+               "The left-hand side of an assignment must be a variable");
+      semanticError(6, left->lineNumber, msg);
+    }
+
+    return left_type;
   }
 
   // Case F: Binary operations - expr OP expr
@@ -1124,29 +1274,75 @@ static Type analyzeExpr(TreeNode *node) {
                   sibling->type == NODE_STAR || sibling->type == NODE_DIV ||
                   sibling->type == NODE_RELOP || sibling->type == NODE_AND ||
                   sibling->type == NODE_OR)) {
-    analyzeExpr(child);
-    TreeNode *right = sibling->nextSibling;
-    if (right)
-      analyzeExpr(right);
+    Type t1 = analyzeExpr(child);
+    Type t2 = analyzeExpr(sibling->nextSibling);
+
+    if (t1 && t2) {
+      if (t1->kind == TYPE_BASIC && t2->kind == TYPE_BASIC &&
+          t1->u.basic == t2->u.basic) {
+        return t1;
+      } else {
+        semanticError(7, node->lineNumber, "Type mismatched for oprands");
+      }
+    }
     // TODO: Check operand types (Error 7)
     return NULL;
   }
 
   // Case G: Array indexing - expr [ expr ] (non-ID left side)
   if (sibling && sibling->type == NODE_LB) {
-    analyzeExpr(child);
-    TreeNode *index = sibling->nextSibling;
-    if (index && index->type == NODE_EXPR) {
-      analyzeExpr(index);
+    Type arrayType = analyzeExpr(child);
+    // Error 10: Check if it's an array
+    if (!arrayType || arrayType->kind != TYPE_ARRAY) {
+      semanticError(10, node->lineNumber, "Array indexing on non-array");
     }
-    // TODO: Error 10 (non-array), Error 12 (non-int index)
+    TreeNode *index = sibling->nextSibling;
+    Type indexType = NULL;
+    if (index && index->type == NODE_EXPR) {
+      indexType = analyzeExpr(index);
+    }
+    // Error 12: Check if index is integer
+    if (indexType &&
+        (indexType->kind != TYPE_BASIC || indexType->u.basic != BASIC_INT)) {
+      semanticError(12, node->lineNumber, "Non-integer used as array index");
+    }
+    // Return element type if it's an array
+    if (arrayType && arrayType->kind == TYPE_ARRAY) {
+      return arrayType->u.array.elem;
+    }
     return NULL;
   }
 
   // Case H: Struct member access - expr . ID (non-ID left side)
   if (sibling && sibling->type == NODE_DOT) {
-    analyzeExpr(child);
-    // TODO: Error 13 (non-struct), Error 14 (undefined field)
+    Type structType = analyzeExpr(child);
+    // Error 13: Check if it's a struct
+    if (!structType || structType->kind != TYPE_STRUCTURE) {
+      semanticError(13, node->lineNumber, "Dot operator on non-struct");
+    }
+
+    // Get field name
+    TreeNode *idNode = sibling->nextSibling;
+    if (idNode && idNode->type == NODE_ID && structType &&
+        structType->kind == TYPE_STRUCTURE) {
+      const char *fieldName = idNode->name;
+      // Error 14: Check if field exists
+      FieldList fieldIter = structType->u.structure;
+      bool found = false;
+      while (fieldIter) {
+        if (strcmp(fieldIter->name, fieldName) == 0) {
+          found = true;
+          return fieldIter->type; // return field type
+        }
+        fieldIter = fieldIter->tail;
+      }
+      if (!found) {
+        char msg[64];
+        snprintf(msg, sizeof(msg), "Accessing undefined struct field \"%s\"",
+                 fieldName);
+        semanticError(14, node->lineNumber, msg);
+      }
+    }
     return NULL;
   }
 
@@ -1160,6 +1356,88 @@ static Type analyzeExpr(TreeNode *node) {
   }
 
   return NULL;
+}
+
+// ==================== Symbol Table Printing Functions ====================
+
+static void printType(Type type) {
+    if (!type) {
+        printf("NULL");
+        return;
+    }
+    switch (type->kind) {
+        case TYPE_BASIC:
+            printf("%s", type->u.basic == BASIC_INT ? "int" : "float");
+            break;
+        case TYPE_ARRAY:
+            printf("array[");
+            if (type->u.array.size > 0) {
+                printf("%d", type->u.array.size);
+            }
+            printf("] of ");
+            printType(type->u.array.elem);
+            break;
+        case TYPE_STRUCTURE:
+            printf("struct { ");
+            FieldList field = type->u.structure;
+            while (field) {
+                printf("%s: ", field->name);
+                printType(field->type);
+                if (field->tail) printf(", ");
+                field = field->tail;
+            }
+            printf(" }");
+            break;
+        case TYPE_ERROR:
+            printf("error");
+            break;
+    }
+}
+
+static void printFieldList(FieldList fields) {
+    printf("(");
+    FieldList field = fields;
+    while (field) {
+        printType(field->type);
+        printf(" %s", field->name);
+        if (field->tail) printf(", ");
+        field = field->tail;
+    }
+    printf(")");
+}
+
+void printSymbolTable() {
+    printf("\n========== SYMBOL TABLE ==========\n");
+    bool empty = true;
+    for (int i = 0; i < HASH_TABLE_SIZE; ++i) {
+        Symbol* sym = hashTable[i];
+        while (sym) {
+            empty = false;
+            printf("[Bucket %d] Name: %-20s Kind: ", i, sym->name);
+            switch (sym->kind) {
+                case SYMBOL_VARIABLE:
+                    printf("VARIABLE  Type: ");
+                    printType(sym->info.variableType);
+                    break;
+                case SYMBOL_FUNCTION:
+                    printf("FUNCTION  Return: ");
+                    printType(sym->info.funcInfo.returnType);
+                    printf("  Params: %d ", sym->info.funcInfo.paramCount);
+                    printFieldList(sym->info.funcInfo.params);
+                    break;
+                case SYMBOL_STRUCT:
+                    printf("STRUCT    Type: ");
+                    printType(sym->info.structType);
+                    break;
+            }
+            printf("  Depth: %d\n", sym->depth);
+            sym = sym->next;
+        }
+    }
+    if (empty) {
+        printf("(empty)\n");
+    }
+    printf("==================================\n\n");
 }
 
 // ==================== Main Semantic Analysis Function ====================
@@ -1217,7 +1495,9 @@ void cleanupSemantics() {
         FieldList param = symbol->info.funcInfo.params;
         while (param) {
           FieldList nextParam = param->tail;
-          freeType(param->type);
+
+          // We don't free here, for it can be hold by several variable and
+          // function freeType(param->type);
           free(param);
           param = nextParam;
         }

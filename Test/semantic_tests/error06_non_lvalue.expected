@@ -1,1 +1,1 @@
-Error type 6 at Line 4: Non-lvalue on left side of assignment.
+Error type 6 at Line 5: The left-hand side of an assignment must be a variable.
