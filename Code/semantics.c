@@ -9,6 +9,9 @@
 
 #define DEBUG
 
+#define STRUCTRUAL_EQUAL
+
+
 // ==================== Symbol Table Configuration ====================
 
 #define HASH_TABLE_SIZE 16384 // 2^14, as recommended in the manual
@@ -35,6 +38,8 @@ static Type analyzeExpr(TreeNode *node);
 static void analyzeCompSt(TreeNode *node);
 static void processVarDec(TreeNode *varDecNode, Type baseType, int lineNo);
 static void traverseExtDefList(TreeNode *extDefList);
+static bool typeEqual(Type t1, Type t2);
+static bool fieldListsEqual(FieldList f1, FieldList f2);
 static void freeType(Type type);
 static void freeFieldList(FieldList field);
 static void processFunctionParams(TreeNode *funDecNode, Symbol *funcSym);
@@ -192,7 +197,31 @@ static FieldList createField(const char *name, Type type) {
   return field;
 }
 
-// Check two types for equivalence (name equivalence by default)
+// Check if two field lists are equivalent (same names, same types, same order)
+static bool fieldListsEqual(FieldList f1, FieldList f2) {
+  Log(__func__, "-------------- CHECKING FILED EQUAL -----------");
+  while (f1 && f2) {
+
+    // Check if field names are the same
+#ifndef STRUCTRUAL_EQUAL
+    if (strcmp(f1->name, f2->name) != 0) {
+      return false;
+    }
+#endif
+
+    // Check if field types are the same
+    if (!typeEqual(f1->type, f2->type)) {
+      return false;
+    }
+    // Move to next fields
+    f1 = f1->tail;
+    f2 = f2->tail;
+  }
+  // Both should be NULL at the end (same number of fields)
+  return (f1 == NULL && f2 == NULL);
+}
+
+// Check two types for equivalence (structural equivalence for structs)
 static bool typeEqual(Type t1, Type t2) {
   if (!t1 || !t2)
     return false;
@@ -207,11 +236,8 @@ static bool typeEqual(Type t1, Type t2) {
     return (t1->u.array.size == t2->u.array.size) &&
            typeEqual(t1->u.array.elem, t2->u.array.elem);
   case TYPE_STRUCTURE:
-    // For Requirement 3.3 (structural equivalence), you'd compare fields here
-    // For now (name equivalence), this requires storing struct names
-    // For simplicity, let's return false here (you need to implement this
-    // properly)
-    return false;
+    // Check structural equivalence: same fields in same order with same types
+    return fieldListsEqual(t1->u.structure, t2->u.structure);
   default:
     return false;
   }
@@ -231,14 +257,13 @@ static void freeFieldList(FieldList field) {
 static void freeType(Type type) {
   if (!type)
     return;
+  // Don't free struct types - they're managed by cleanupSemantics
+  if (type->kind == TYPE_STRUCTURE) {
+    return;
+  }
   switch (type->kind) {
   case TYPE_ARRAY:
     freeType(type->u.array.elem);
-    break;
-  case TYPE_STRUCTURE:
-    // For structs, we don't free the field list because it's shared
-    // between the struct definition and variables of that struct type
-    // The field list will be freed when the struct symbol is freed
     break;
   default:
     break;
@@ -717,7 +742,7 @@ static void analyzeExtDef(TreeNode *node) {
   TreeNode *next = specifier->nextSibling;
   if (!next) {
     // Just a specifier (like struct definition without variables)
-    if (type)
+    if (type && type->kind != TYPE_STRUCTURE)
       freeType(type);
     return;
   }
@@ -738,7 +763,7 @@ static void analyzeExtDef(TreeNode *node) {
         semanticError(4, node->lineNumber, "Redefined function");
 
         // Free the type since we're not using it
-        if (type)
+        if (type && type->kind != TYPE_STRUCTURE)
           freeType(type);
         type = NULL;
 
@@ -771,7 +796,7 @@ static void analyzeExtDef(TreeNode *node) {
         currentFunction = NULL;
       }
       // Free the type since we didn't store it anywhere in the second pass
-      if (type)
+      if (type && type->kind != TYPE_STRUCTURE)
         freeType(type);
     }
     // Don't free type in first pass - it's stored in the symbol table
@@ -798,7 +823,7 @@ static void analyzeExtDef(TreeNode *node) {
     }
   }
 
-  if (type)
+  if (type && type->kind != TYPE_STRUCTURE)
     freeType(type);
 }
 
@@ -821,7 +846,8 @@ static void analyzeDef(TreeNode *node) {
 
   TreeNode *decList = specifier->nextSibling;
   if (!decList || decList->type != NODE_DECLIST) {
-    freeType(type);
+    if (type->kind != TYPE_STRUCTURE)
+      freeType(type);
     return;
   }
 
