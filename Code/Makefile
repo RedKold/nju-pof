@@ -65,6 +65,6 @@ submit:
 	cp ./parser ../parser
 	echo "replacing parser in root directory"
 	rm -f ../231275036.zip
-	cd .. && zip -r 231275036.zip . -x "231275036.zip" -x "*.git*" -x "*~"
+	cd .. && zip -r 231275036.zip . -x "231275036.zip" -x "*.git*" -x "*~" -x "./Test/*" -x "./Manual/*" -x "./Resources/*"
 	echo "update zip!"
 
