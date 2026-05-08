@@ -1,0 +1,38 @@
+int foo(int x, float y)
+{
+    return x;
+}
+
+int foo(int a, float b)
+{
+    return a;
+}
+
+float bar()
+{
+    return 1.5;
+}
+
+int main()
+{
+    int i;
+    float f;
+
+    i = bar();
+
+    f = bar();
+
+    foo(1);
+
+    foo(1, 2.0, 3);
+
+    foo(2.0, 3);
+
+    int i;
+
+    5 = i;
+
+    baz();
+
+    return 0;
+}

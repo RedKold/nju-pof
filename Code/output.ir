@@ -1,0 +1,7 @@
+FUNCTION add:
+PARAM a
+PARAM b
+t3 := a
+t3 := b
+t3 := t3 + t3
+RETURN t3

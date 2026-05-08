@@ -7,7 +7,7 @@
 
 #include <assert.h>
 
-#define DEBUG
+// #define DEBUG
 
 #define STRUCTRUAL_EQUAL
 
@@ -1504,6 +1504,10 @@ void initSemantics() {
   currentScopeDepth = 0;
   // Initialize hash table
   memset(hashTable, 0, sizeof(hashTable));
+
+  // 插入read and write到符号表
+  insertSymbol("write", SYMBOL_FUNCTION);
+  insertSymbol("read", SYMBOL_FUNCTION);
 }
 
 void cleanupSemantics() {

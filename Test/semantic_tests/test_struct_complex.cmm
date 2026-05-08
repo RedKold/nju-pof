@@ -1,0 +1,51 @@
+struct A {
+    int x;
+    float y;
+};
+
+struct B {
+    int x;
+    float y;
+};
+
+struct C {
+    int a;
+    struct B b;
+};
+
+struct D {
+    int a;
+    struct B b;
+};
+
+struct A {
+    int z;
+};
+
+int main()
+{
+    struct A var1;
+    struct B var2;
+    struct C var3;
+    struct D var4;
+    int arr[10];
+
+    struct BadStruct {
+        int f1;
+        float f1;
+    };
+
+    var1 = var2;
+
+    var3.b.x = 0;
+
+    var3 = var4;
+
+    struct Undefined s;
+
+    var1.nonexistent;
+
+    arr[1.5];
+
+    return 0;
+}

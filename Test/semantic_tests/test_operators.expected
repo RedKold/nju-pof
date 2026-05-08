@@ -1,0 +1,6 @@
+Error type 7 at Line 16: Type mismatched for operands.
+Error type 7 at Line 19: Type mismatched for operands.
+Error type 7 at Line 25: Type mismatched for operands.
+Error type 7 at Line 31: Type mismatched for operands.
+Error type 7 at Line 32: Type mismatched for operands.
+Error type 6 at Line 35: The left-hand side of assignment must be an lvalue.

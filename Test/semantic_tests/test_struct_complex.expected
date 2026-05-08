@@ -1,0 +1,5 @@
+Error type 16 at Line 26: Duplicate name of struct "A".
+Error type 15 at Line 35: Duplicate field "f1" in struct definition.
+Error type 17 at Line 47: Undefined struct "Undefined".
+Error type 14 at Line 50: Accessing non-existent field "nonexistent" in struct "A".
+Error type 12 at Line 53: Non-integer index.

@@ -181,7 +181,7 @@ program: extDefList
          $$ = createTreeNode(NODE_PROGRAM, "Program", 1); // 固定为第1行
          addChild($$, $1);
          // if has error, don't print it
-        if(has_error == 0)
+        // if(has_error == 0)
           printTree($$, 0);
          // Store AST root for semantic analysis instead of freeing
          ast_root = $$;

@@ -1,0 +1,8 @@
+Error type 4 at Line 12: Duplicated function "foo".
+Error type 8 at Line 23: Type mismatched for return.
+Error type 9 at Line 29: Function argument num mismatch.
+Error type 9 at Line 32: Function argument num mismatch.
+Error type 9 at Line 35: Function argument type mismatch.
+Error type 3 at Line 38: Redefined variable "i".
+Error type 6 at Line 41: The left-hand side of assignment must be an lvalue.
+Error type 2 at Line 44: Undefined function "baz".

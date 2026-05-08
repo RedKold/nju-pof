@@ -1,0 +1,39 @@
+int add(int a, int b)
+{
+    return a + b;
+}
+
+struct S { 
+        int x; float y;
+    };
+struct T { int x; float y; };
+
+
+int main()
+{
+    struct S s;
+    struct T t;
+
+    int i;
+    float f;
+    
+    j = 0;
+
+    i = f;
+
+    f = i + f;
+
+    i = i[0];
+
+    i();
+
+    i.x;
+
+    s.z;
+
+    t = s;
+
+    undefined_func();
+
+    return 0;
+}

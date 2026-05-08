@@ -1,0 +1,28 @@
+int main()
+{
+    int a[10];
+    int b[5][5];
+    float f[10];
+    int i;
+    float x;
+
+    a[0] = 5;
+    b[1][2] = 10;
+
+    i[0] = 5;
+
+    a[1.5] = 5;
+
+    a[0] = x;
+
+    a = b;
+
+    (i + 1) = 5;
+
+
+    x = a[0] + x;
+
+    if (x) { }
+
+    return 0;
+}

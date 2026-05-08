@@ -1,0 +1,28 @@
+int main()
+{
+    int i, j;
+    float f, g;
+
+    i = j + 1;
+    f = g * 2.5;
+
+    i = i + f;
+
+    f = f - i;
+
+    i = j > 5;
+    i = j == 10;
+
+    i = f > g;
+
+    i = i && j;
+    i = i || j;
+    i = !i;
+
+    i = f && g;
+    i = !f;
+
+    (i + 1)++;
+
+    return 0;
+}

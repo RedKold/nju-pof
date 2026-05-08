@@ -32,7 +32,7 @@ syntax-c: $(YFILE)
 -include $(patsubst %.o, %.d, $(OBJS))
 
 # 定义的一些伪目标
-.PHONY: clean test semantic-test ss-test
+.PHONY: clean test semantic-test ss-test 
 test: parser
 	@echo "Running simplized semantic analysis test..."
 	@python3 ../Test/test_runner.py | grep "Test"
@@ -68,3 +68,6 @@ submit:
 	cd .. && zip -r 231275036.zip . -x "231275036.zip" -x "*.git*" -x "*~" -x "./Test/*" -x "./Manual/*" -x "./Resources/*"
 	echo "update zip!"
 
+lab3-helper:
+	cp ./parser ../Test/lab3_test/parser
+	cd ../Test/lab3_test/ && ./parser test1.cmm test1.ir

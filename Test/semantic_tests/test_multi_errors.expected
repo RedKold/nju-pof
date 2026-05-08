@@ -1,0 +1,8 @@
+Error type 1 at Line 22: Undefined variable "j".
+Error type 5 at Line 25: Type mismatched for assignment.
+Error type 7 at Line 28: Type mismatched for operands.
+Error type 10 at Line 31: Indexing on non-array variable "i".
+Error type 11 at Line 34: Applying function call on non-function variable "i".
+Error type 13 at Line 37: Applying dot operator on non-struct variable "i".
+Error type 14 at Line 40: Accessing non-existent field "z" in struct "S".
+Error type 2 at Line 46: Undefined function "undefined_func".

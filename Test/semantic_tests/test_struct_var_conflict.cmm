@@ -1,0 +1,24 @@
+struct S {
+    int x;
+};
+
+int S;
+
+struct T {
+    int y;
+};
+
+int main()
+{
+    struct T {
+        int z;
+    };
+
+    struct S s1;
+
+    s1.x = S;
+
+    int S;
+
+    return 0;
+}

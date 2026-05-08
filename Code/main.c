@@ -2,6 +2,7 @@
 #include "tree/tree.h"
 #include "syntax.tab.h"
 #include "semantics.h"
+#include "translate.h"
 
 // Declare the AST root from syntax.y
 extern TreeNode* ast_root;
@@ -22,6 +23,16 @@ int main(int argc, char**argv)
     // If no syntax errors, perform semantic analysis
     if (!has_error && ast_root) {
         analyzeSemantics(ast_root);
+
+        // If no semantic errors, generate intermediate code
+        if (getSemanticErrorCount() == 0) {
+            const char* outputFilename = "output.ir";
+            if (argc >= 3) {
+                outputFilename = argv[2];
+            }
+            translateProgram(ast_root, outputFilename);
+        }
+
         // Clean up
         freeTree(ast_root);
         cleanupSemantics();

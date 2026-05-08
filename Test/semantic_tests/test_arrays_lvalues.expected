@@ -1,0 +1,7 @@
+Error type 10 at Line 18: Indexing on non-array variable "i".
+Error type 12 at Line 21: Non-integer index.
+Error type 5 at Line 24: Type mismatched for assignment.
+Error type 6 at Line 27: The left-hand side of assignment must be an lvalue.
+Error type 6 at Line 30: The left-hand side of assignment must be an lvalue.
+Error type 7 at Line 36: Type mismatched for operands.
+Error type 7 at Line 39: Type mismatched for operands.
