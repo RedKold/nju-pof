@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <assert.h>
 
 // ==================== Global Variables ====================
 
@@ -222,7 +223,10 @@ static void traverseStmtList(TreeNode *stmtList) {
 
 // Helper to extract identifier name from a node (ID or VarDec)
 static const char* getIdentifierName(TreeNode* node) {
-    if (!node) return NULL;
+    // only can return ID
+    if (!node) {
+      return NULL;
+    }
     if (node->type == NODE_ID) return node->name;
     // If it's a VarDec, recursively look for the ID child
     if (node->type == NODE_VARDEC) {
@@ -437,6 +441,7 @@ void translateStmt(TreeNode* node) {
             char* label_false = new_label();
             char* label_end = new_label();
 
+
             // 翻译条件
             translateCond(expr, label_true, label_false);
 
@@ -558,7 +563,6 @@ void translateExp(TreeNode* node, char* place) {
             snprintf(value_str, sizeof(value_str), "#%d", node->intVal);
             addAssignIR(place, value_str);
         } else if (node->type == NODE_ID) {
-            // 简单标识符
             addAssignIR(place, node->name);
         }
         return;
@@ -668,8 +672,14 @@ void translateExp(TreeNode* node, char* place) {
             char* temp_right = new_temp();
             translateExp(right, temp_right);
 
-            // 找到左边的标识符 - 直接提取，不要调用 translateExp
-            const char* left_name = getIdentifierName(left);
+
+            assert(left);
+
+            // here you should get the right n!
+            const char* left_name = getIdentifierName(left->firstChild);
+
+            printf("left_name is %s\n", left_name);
+
             if (left_name) {
                 addAssignIR((char*)left_name, temp_right);
                 // 赋值表达式也返回值
@@ -713,32 +723,140 @@ void translateExp(TreeNode* node, char* place) {
     }
 }
 
-void translateCond(TreeNode* node, char* label_true, char* label_false) {
-    char* temp = NULL;
+// Helper to parse the relop string from the T_RELOP node
+static RelOp parse_relop(TreeNode* node) {
+    if (!node) return RELOP_EQ;
+    if (strcmp(node->name, "<") == 0) return RELOP_LT;
+    if (strcmp(node->name, "<=") == 0) return RELOP_LE;
+    if (strcmp(node->name, ">") == 0) return RELOP_GT;
+    if (strcmp(node->name, ">=") == 0) return RELOP_GE;
+    if (strcmp(node->name, "==") == 0) return RELOP_EQ;
+    if (strcmp(node->name, "!=") == 0) return RELOP_NE;
+    return RELOP_EQ;
+}
 
+void translateCond(TreeNode* node, char* label_true, char* label_false) {
     if (node == NULL || label_true == NULL || label_false == NULL) return;
 
-    // 直接使用默认处理，先不优化关系表达式，确保正确性
-    temp = new_temp();
-    translateExp(node, temp);
+    // If it's an expression node, check what kind it is
+    if (node->type == NODE_EXPR) {
+        TreeNode* left = node->firstChild;
+        if (!left) return;
+        TreeNode* op_node = left->nextSibling;
+        if (!op_node) {
+            // Single child - just check if non-zero
+            char* temp = new_temp();
+            translateExp(node, temp);
+            IRInstruction inst1 = createIR(IR_IF_GOTO);
+            strncpy(inst1->u.if_goto.arg1, temp, 31);
+            inst1->u.if_goto.arg1[31] = '\0';
+            inst1->u.if_goto.op = RELOP_NE;
+            strncpy(inst1->u.if_goto.arg2, "#0", 31);
+            inst1->u.if_goto.arg2[31] = '\0';
+            strncpy(inst1->u.if_goto.label, label_true, 31);
+            inst1->u.if_goto.label[31] = '\0';
+            addIR(inst1);
+            IRInstruction inst2 = createIR(IR_GOTO);
+            strncpy(inst2->u.goto_.label, label_false, 31);
+            inst2->u.goto_.label[31] = '\0';
+            addIR(inst2);
+            free(temp);
+            return;
+        }
+        TreeNode* right = op_node->nextSibling;
+        if (!right) return;
 
-    // 生成条件跳转: if temp != 0 goto label_true, else goto label_false
-    IRInstruction inst1 = createIR(IR_IF_GOTO);
-    strncpy(inst1->u.if_goto.arg1, temp, 31);
-    inst1->u.if_goto.arg1[31] = '\0';
-    inst1->u.if_goto.op = RELOP_NE;
-    strncpy(inst1->u.if_goto.arg2, "#0", 31);
-    inst1->u.if_goto.arg2[31] = '\0';
-    strncpy(inst1->u.if_goto.label, label_true, 31);
-    inst1->u.if_goto.label[31] = '\0';
-    addIR(inst1);
-
-    IRInstruction inst2 = createIR(IR_GOTO);
-    strncpy(inst2->u.goto_.label, label_false, 31);
-    inst2->u.goto_.label[31] = '\0';
-    addIR(inst2);
-
-    free(temp);
+        if (op_node->type == NODE_RELOP) {
+            // Relational operator: left relop right
+            char* temp_left = new_temp();
+            char* temp_right = new_temp();
+            translateExp(left, temp_left);
+            translateExp(right, temp_right);
+            RelOp op = parse_relop(op_node);
+            IRInstruction inst1 = createIR(IR_IF_GOTO);
+            strncpy(inst1->u.if_goto.arg1, temp_left, 31);
+            inst1->u.if_goto.arg1[31] = '\0';
+            inst1->u.if_goto.op = op;
+            strncpy(inst1->u.if_goto.arg2, temp_right, 31);
+            inst1->u.if_goto.arg2[31] = '\0';
+            strncpy(inst1->u.if_goto.label, label_true, 31);
+            inst1->u.if_goto.label[31] = '\0';
+            addIR(inst1);
+            IRInstruction inst2 = createIR(IR_GOTO);
+            strncpy(inst2->u.goto_.label, label_false, 31);
+            inst2->u.goto_.label[31] = '\0';
+            addIR(inst2);
+            free(temp_left);
+            free(temp_right);
+        } else if (op_node->type == NODE_AND) {
+            // Logical AND: left && right (short-circuit)
+            char* mid_label = new_label();
+            translateCond(left, mid_label, label_false);
+            IRInstruction mid_inst = createIR(IR_LABEL);
+            strncpy(mid_inst->u.label.label, mid_label, 31);
+            mid_inst->u.label.label[31] = '\0';
+            addIR(mid_inst);
+            translateCond(right, label_true, label_false);
+            free(mid_label);
+        } else if (op_node->type == NODE_OR) {
+            // Logical OR: left || right (short-circuit)
+            char* mid_label = new_label();
+            translateCond(left, label_true, mid_label);
+            IRInstruction mid_inst = createIR(IR_LABEL);
+            strncpy(mid_inst->u.label.label, mid_label, 31);
+            mid_inst->u.label.label[31] = '\0';
+            addIR(mid_inst);
+            translateCond(right, label_true, label_false);
+            free(mid_label);
+        } else {
+            // Other binary operators - just evaluate and check non-zero
+            char* temp = new_temp();
+            translateExp(node, temp);
+            IRInstruction inst1 = createIR(IR_IF_GOTO);
+            strncpy(inst1->u.if_goto.arg1, temp, 31);
+            inst1->u.if_goto.arg1[31] = '\0';
+            inst1->u.if_goto.op = RELOP_NE;
+            strncpy(inst1->u.if_goto.arg2, "#0", 31);
+            inst1->u.if_goto.arg2[31] = '\0';
+            strncpy(inst1->u.if_goto.label, label_true, 31);
+            inst1->u.if_goto.label[31] = '\0';
+            addIR(inst1);
+            IRInstruction inst2 = createIR(IR_GOTO);
+            strncpy(inst2->u.goto_.label, label_false, 31);
+            inst2->u.goto_.label[31] = '\0';
+            addIR(inst2);
+            free(temp);
+        }
+    } else {
+        // Single node (ID, INT, etc.) - check if non-zero
+        // Also handle NOT here - check if this is a NOT expression
+        TreeNode* child = node->firstChild;
+        if (child && child->type == NODE_NOT) {
+            // Logical NOT: !expr
+            TreeNode* expr = child->nextSibling;
+            if (expr) {
+                translateCond(expr, label_false, label_true);
+                return;
+            }
+        }
+        // Otherwise, check non-zero
+        char* temp = new_temp();
+        translateExp(node, temp);
+        IRInstruction inst1 = createIR(IR_IF_GOTO);
+        strncpy(inst1->u.if_goto.arg1, temp, 31);
+        inst1->u.if_goto.arg1[31] = '\0';
+        inst1->u.if_goto.op = RELOP_NE;
+        strncpy(inst1->u.if_goto.arg2, "#0", 31);
+        inst1->u.if_goto.arg2[31] = '\0';
+        strncpy(inst1->u.if_goto.label, label_true, 31);
+        inst1->u.if_goto.label[31] = '\0';
+        addIR(inst1);
+        IRInstruction inst2 = createIR(IR_GOTO);
+        strncpy(inst2->u.goto_.label, label_false, 31);
+        inst2->u.goto_.label[31] = '\0';
+        addIR(inst2);
+        free(temp);
+    }
 }
 
 void translateArgs(TreeNode* node, char** arg_list, int* arg_count) {

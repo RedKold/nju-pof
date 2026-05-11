@@ -1511,6 +1511,8 @@ void initSemantics() {
 }
 
 void cleanupSemantics() {
+
+  // printSymbolTable();
   // Free all symbols
   for (int i = 0; i < HASH_TABLE_SIZE; ++i) {
     Symbol *symbol = hashTable[i];

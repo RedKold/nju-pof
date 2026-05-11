@@ -132,7 +132,9 @@ int yyerror(const char* msg) {
 %token <num> T_INT
 %token <real> T_FLOAT
 %token <node> T_ID
-%token T_SEMI T_COMMA T_ASSIGNOP T_RELOP T_PLUS T_MINUS T_STAR T_DIV
+%token T_SEMI T_COMMA T_ASSIGNOP
+%token <id> T_RELOP
+%token T_PLUS T_MINUS T_STAR T_DIV
 %token T_AND T_OR T_DOT T_NOT
 %token <id> T_TYPE
 %token T_LP T_RP T_LB T_RB T_LC T_RC
@@ -702,7 +704,7 @@ expr:
     {
       $$ = createTreeNode(NODE_EXPR, "Exp", yylineno);
       addChild($$, $1);
-      TreeNode* relopNode = createTreeNode(NODE_RELOP, yytext, yylineno);
+      TreeNode* relopNode = createTreeNode(NODE_RELOP, $2, yylineno);
       addChild($$, relopNode);
       addChild($$, $3);
     }

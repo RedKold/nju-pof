@@ -36,7 +36,7 @@ int line_has_error[1000] = {0}; // 假设文件最多有1000行
 "while"                     { return T_WHILE;}
 "&&"                        { return T_AND;}
 "||"                        { return T_OR;}
-">="|"<="|"=="|"!="|">"|"<" { return T_RELOP;}
+">="|"<="|"=="|"!="|">"|"<" { strncpy(yylval.id, yytext, 31); yylval.id[31] = '\0'; return T_RELOP;}
 "="                         { return T_ASSIGNOP;}
 "+"                         { return T_PLUS;}
 "-"                         { return T_MINUS;}

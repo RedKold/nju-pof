@@ -1,3 +1,34 @@
 FUNCTION main:
-t1 := #0
-RETURN t1
+READ t2
+t1 := t2
+t3 := n
+t4 := #0
+IF t3 > t4 GOTO label1
+GOTO label2
+LABEL label1:
+t6 := #1
+ARG t6
+WRITE t6
+t5 := t6
+GOTO label3
+LABEL label2:
+t7 := n
+t8 := #0
+IF t7 < t8 GOTO label4
+GOTO label5
+LABEL label4:
+t11 := #1
+t10 := #0 - t11
+ARG t10
+WRITE t10
+t9 := t10
+GOTO label6
+LABEL label5:
+t13 := #0
+ARG t13
+WRITE t13
+t12 := t13
+LABEL label6:
+LABEL label3:
+t14 := #0
+RETURN t14
