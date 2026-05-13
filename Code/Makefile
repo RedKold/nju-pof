@@ -69,5 +69,9 @@ submit:
 	echo "update zip!"
 
 lab3-helper:
-	cp ./parser ../Test/lab3_test/parser
-	cd ../Test/lab3_test/ && ./parser test1.cmm test1.ir
+	@if [ "$(N)" = "" ]; then \
+		echo "Usage: make lab3-helper N=<test number> (e.g., make lab3-helper N=1)"; \
+	else \
+		cp ./parser ../Test/lab3_test/parser; \
+		cd ../Test/lab3_test/ && ./parser test$(N).cmm test$(N).ir; \
+	fi

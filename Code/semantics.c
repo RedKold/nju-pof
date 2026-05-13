@@ -827,6 +827,27 @@ static void analyzeExtDef(TreeNode *node) {
     freeType(type);
 }
 
+// Helper: Process a decList recursively
+static void processDecList(TreeNode *decList, Type type, int lineNumber) {
+  if (!decList || decList->type != NODE_DECLIST)
+    return;
+
+  TreeNode *child = decList->firstChild;
+  while (child) {
+    if (child->type == NODE_DEC) {
+      TreeNode *varDec = child->firstChild;
+      if (varDec && varDec->type == NODE_VARDEC) {
+        processVarDec(varDec, type, lineNumber);
+      }
+    } else if (child->type == NODE_DECLIST) {
+      // Recursively process nested decList
+      processDecList(child, type, lineNumber);
+    }
+    // Skip COMMA nodes and move to next sibling
+    child = child->nextSibling;
+  }
+}
+
 // Analyze a Def node (local definition)
 static void analyzeDef(TreeNode *node) {
   if (!node || node->type != NODE_DEF)
@@ -851,17 +872,8 @@ static void analyzeDef(TreeNode *node) {
     return;
   }
 
-  // Process each declaration in decList
-  TreeNode *dec = decList->firstChild;
-  while (dec) {
-    if (dec->type == NODE_DEC) {
-      TreeNode *varDec = dec->firstChild;
-      if (varDec && varDec->type == NODE_VARDEC) {
-        processVarDec(varDec, type, node->lineNumber);
-      }
-    }
-    dec = dec->nextSibling;
-  }
+  // Process each declaration in decList using our helper
+  processDecList(decList, type, node->lineNumber);
 
   freeType(type);
 }
@@ -1506,8 +1518,23 @@ void initSemantics() {
   memset(hashTable, 0, sizeof(hashTable));
 
   // 插入read and write到符号表
-  insertSymbol("write", SYMBOL_FUNCTION);
-  insertSymbol("read", SYMBOL_FUNCTION);
+  // Setup write function: int write(int)
+  Symbol* writeSym = insertSymbol("write", SYMBOL_FUNCTION);
+  if (writeSym) {
+    writeSym->info.funcInfo.returnType = createBasicType(BASIC_INT);
+    writeSym->info.funcInfo.paramCount = 1;
+    writeSym->info.funcInfo.params = createField("x", createBasicType(BASIC_INT));
+    writeSym->info.funcInfo.defined = true;
+  }
+
+  // Setup read function: int read()
+  Symbol* readSym = insertSymbol("read", SYMBOL_FUNCTION);
+  if (readSym) {
+    readSym->info.funcInfo.returnType = createBasicType(BASIC_INT);
+    readSym->info.funcInfo.paramCount = 0;
+    readSym->info.funcInfo.params = NULL;
+    readSym->info.funcInfo.defined = true;
+  }
 }
 
 void cleanupSemantics() {
